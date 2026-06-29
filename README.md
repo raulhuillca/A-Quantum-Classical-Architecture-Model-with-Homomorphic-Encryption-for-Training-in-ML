@@ -48,6 +48,61 @@ import pandas as pd
 from qiskit import QuantumCircuit, transpile
 from qiskit_aer import AerSimulator
 from sklearn.preprocessing import StandardScaler
+
+def aplicar_qft_completa(data_vector):
+    n_qubits = int(np.ceil(np.log2(len(data_vector))))
+    target_len = 2**n_qubits
+    padded_data = np.pad(data_vector, (0, target_len - len(data_vector)), 'constant')
+    qc = QuantumCircuit(n_qubits)
+    norm = np.linalg.norm(padded_data)
+    if norm == 0: return np.zeros(target_len, dtype=complex)
+    qc.initialize(padded_data / norm, range(n_qubits))
+    for j in range(n_qubits):
+        for k in range(j):
+            qc.cp(np.pi / float(2**(j - k)), k, j)
+        qc.h(j)
+    qc.save_statevector()
+    sim = AerSimulator(method='statevector')
+    result = sim.run(transpile(qc, sim)).result()
+    return result.get_statevector().data * norm
+
+def aplicar_qft_data_real(data_vector):
+    return np.real(aplicar_qft_completa(data_vector))[:len(data_vector)]
+
+archivo_entrada = "dataset_sintetico_1k.csv"
+archivo_salida = "dataset_qft_1k.csv"
+
+print(f"[*] Leyendo {archivo_entrada}...")
+df = pd.read_csv(archivo_entrada)
+
+# 1. Normalizar X
+scaler_X = StandardScaler()
+X_crudos = scaler_X.fit_transform(df[['temp_ambiente', 'num_personas', 'eficiencia_maquina']])
+
+# 2. Normalizar Y (CRÍTICO para la estabilidad en FHE)
+scaler_Y = StandardScaler()
+Y_target_scaled = scaler_Y.fit_transform(df[['consumo_kwh']]).flatten()
+
+print("[*] Aplicando QFT a las características (Transformación por individuo)...")
+
+# =================================================================
+# CORRECCIÓN APLICADA: 
+# Iteramos sobre cada "fila" de X_crudos para crear un estado cuántico 
+# por cada registro independiente, preservando la causalidad.
+# =================================================================
+X_qft = np.array([aplicar_qft_data_real(fila) for fila in X_crudos])
+
+# 3. Añadir la columna de Bias (Intercepto) - Una columna de 1s
+X_qft_bias = np.c_[np.ones(len(X_qft)), X_qft]
+
+# Guardamos también los parámetros del Scaler Y para reconstruir el dato al final
+df_qft = pd.DataFrame(X_qft_bias, columns=['bias', 'qft_f1', 'qft_f2', 'qft_f3'])
+df_qft['target_scaled'] = Y_target_scaled
+df_qft['y_mean'] = scaler_Y.mean_[0]
+df_qft['y_scale'] = scaler_Y.scale_[0]
+
+df_qft.to_csv(archivo_salida, index=False, float_format='%.10f')
+print(f"[+] QFT completado. Datos (con Bias) guardados en {archivo_salida}")
 ```
 
 ---
