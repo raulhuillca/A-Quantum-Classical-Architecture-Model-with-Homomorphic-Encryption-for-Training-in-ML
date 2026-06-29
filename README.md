@@ -149,7 +149,7 @@ Aprendizaje_automatico_cifrado_homorfico/
 
 
 
---
+---
 ## 💻 Hardware and Environment
 
 To guarantee reproducibility and provide the computational power required for the QFT simulations and the CKKS cryptographic operations, the experiments were executed on the following workstation configuration:
