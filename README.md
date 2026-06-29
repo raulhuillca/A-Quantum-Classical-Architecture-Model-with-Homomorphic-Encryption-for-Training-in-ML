@@ -129,7 +129,6 @@ Technically, the model implements an iterative gradient descent optimizer operat
 
 ## 📂 Repository Structure
 
-```text
 Aprendizaje_automatico_cifrado_homorfico/
 │
 ├── data/
@@ -149,13 +148,4 @@ Aprendizaje_automatico_cifrado_homorfico/
 
 
 
----
 
-## 💻 Hardware and Environment
-
-To guarantee reproducibility and provide the computational power required for the QFT simulations and the CKKS cryptographic operations, the experiments were executed on the following workstation configuration:
-
-* **Processor (CPU):** Dual Intel® Xeon® W-2123 @ 3.60 GHz (8 physical cores total, supporting hyper-threading).
-* **Memory (RAM):** 64 GB DDR4 ECC (Error Correction Code) for stable high-load training sessions.
-* **Graphics (GPU):** NVIDIA Quadro P2000 (utilizing the cuQuantum SDK for hardware-accelerated QFT state-vector simulation).
-* **Frameworks:** Python, Qiskit, PyTorch, and TenSEAL (built on Microsoft SEAL 4.0).
