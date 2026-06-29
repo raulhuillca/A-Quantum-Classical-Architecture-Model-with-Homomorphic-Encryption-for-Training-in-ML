@@ -43,9 +43,12 @@ The workflow follows a structured progression to ensure data integrity and priva
 
 
 ```
-Este es un bloque de código.
+import numpy as np
+import pandas as pd
+from qiskit import QuantumCircuit, transpile
+from qiskit_aer import AerSimulator
+from sklearn.preprocessing import StandardScaler
 ```
-
 
 ---
 
