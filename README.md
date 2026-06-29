@@ -6,90 +6,74 @@
 [![TenSEAL](https://img.shields.io/badge/TenSEAL-Homomorphic-orange.svg)](https://github.com/OpenMined/TenSEAL)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This repository contains the official implementation and source code for the research paper: **"A Quantum-Classical Architecture Model with Homomorphic Encryption for Training and Privacy Preservation in Machine Learning"**.
-
-The project proposes a hybrid architecture integrating the Quantum Fourier Transform (QFT) and the CKKS homomorphic encryption scheme. This allows for the secure training of machine learning models on fully encrypted data, preserving statistical utility and ensuring absolute data privacy in distributed cloud environments.
-
----
+This repository contains the official implementation for the research paper: **"A Quantum-Classical Architecture Model with Homomorphic Encryption for Training and Privacy Preservation in Machine Learning"**.
 
 ## 📌 Table of Contents
 * [Mathematical Foundations](#mathematical-foundations)
-* [Adapted Machine Learning Models](#adapted-machine-learning-models)
-* [Hardware and Environment](#hardware-and-environment)
+* [Data Pipeline and Processing](#data-pipeline-and-processing)
+* [Homomorphic Encryption Pipeline](#homomorphic-encryption-pipeline)
+* [Blind Training Methodology](#blind-training-methodology)
 * [Repository Structure](#repository-structure)
-* [Usage and Execution](#usage-and-execution)
-* [Experimental Results](#experimental-results)
+* [Hardware and Environment](#hardware-and-environment)
 * [Citation and Authors](#citation-and-authors)
 
 ---
 
 ## 📐 Mathematical Foundations
-
 ### 1. Quantum Feature Extraction (QFT)
-To capture global correlations hidden in the spatial domain, data is mapped into quantum states. The QFT operates over a Hilbert space of dimension $N = 2^n$ shifting the base states according to:
-
+To capture global correlations, we map spatial inputs into the frequency domain using the Quantum Fourier Transform:
 $$\text{QFT} \ket{k} = \frac{1}{\sqrt{N}} \sum_{j=0}^{N-1} e^{2\pi i k j / N} \ket{j}$$
 
 ### 2. Homomorphic Shielding (CKKS)
-The frequency projection is encrypted using the CKKS (Cheon-Kim-Kim-Song) scheme via Microsoft SEAL. CKKS relies on the Ring Learning With Errors (RLWE) problem over the cyclotomic polynomial ring:
-
-$$R_q = \mathbb{Z}_q[x]/(x^N + 1)$$
-
-Values are represented as $\text{Enc}(m) = m + e$, where $e$ is the security noise. The architecture ensures that the noise budget remains within the modulus $q$ limits during all training epochs.
+We utilize the CKKS scheme for real-number arithmetic on encrypted data. The security relies on the Ring Learning With Errors (RLWE) problem over the cyclotomic ring $R_q = \mathbb{Z}_q[x]/(x^N + 1)$.
 
 ---
 
-## 🧠 Adapted Machine Learning Models
+## 📊 Data Pipeline and Processing
 
-Due to the strict arithmetic constraints of FHE (supporting only polynomial additions and multiplications), standard algorithms were mathematically adapted to avoid exhaustive bootstrapping:
+The workflow follows a structured progression to ensure data integrity and privacy:
 
-* **Homomorphic Logistic Regression:** The non-polynomial sigmoid function is replaced by a 3rd-degree Maclaurin series approximation:
-  $$h(z) \approx 0.5 + 0.25z - \frac{1}{48}z^3$$
-* **LS-SVM (Polynomial Kernel):** The standard Hinge loss is replaced with a continuous least-squares residual optimization, incorporating Tikhonov ($L_2$) regularization to prevent tensor overflow:
-  $$\nabla \beta_k = \frac{1}{N} \sum (\llbracket e_j \rrbracket \cdot \llbracket x_{jk} \rrbracket) + \lambda \llbracket \beta_k \rrbracket$$
-* **Shallow Neural Network (MLP):** Utilizes a quadratic activation function $f(x) = x^2$ to limit the multiplicative depth strictly to 3 levels, supported by an interactive hybrid backpropagation scheme.
+1. **Synthetic Generation (`generar_datos_sinteticos.py`):** Creates the primary dataset foundation with varying scales: `dataset_sintetico_1k.csv`, `10k.csv`, `100k.csv`, `500k.csv`, and `1M.csv`.
+2. **Frequency Projection (`01_procesamiento_qft.py`):** Takes a raw file (e.g., `dataset_sintetico_1k.csv`) and transforms it into `dataset_qft_1k.csv`. This script leverages Qiskit/cuQuantum to perform the QFT, mapping spatial features into an optimized frequency-domain representation.
 
 ---
 
-## 💻 Hardware and Environment
+## ⚙️ Homomorphic Encryption Pipeline (`02_cifrado_ckks.py`)
 
-To guarantee reproducibility, the experiments and simulations were executed on the following workstation setup:
+This module manages the cryptographic lifecycle:
+* **Context Generation:** Produces `contexto_ckks.bytes`, which stores SEAL security parameters, polynomial degrees, and the public/secret key set.
+* **Encryption:** Serializes the QFT-transformed datasets into `datos_cifrados_ckks.pkl`.
 
-* **CPU:** Dual Intel® Xeon® W-2123 @ 3.60 GHz (4 cores with hyper-threading per processor)
-* **RAM:** 64 GB DDR4 ECC
-* **GPU:** NVIDIA Quadro P2000 (Utilized for cuQuantum QFT simulation acceleration)
-* **Frameworks:** Python, Qiskit, NVIDIA cuQuantum, PyTorch, and TenSEAL.
+**Performance Note:** While our generator supports up to 1M records, the experimental validation is benchmarked at **1,000 vectors**. This choice is critical as encrypting and performing arithmetic on million-vector tensors requires massive distributed memory clusters that exceed the capacity of standard high-performance workstations.
+
+---
+
+## 🧠 Blind Training Methodology (`03_01_entrenamiento_ciego.py`)
+
+The "Blind Training" process enables the server to learn from data without ever accessing it in plaintext. 
+
+Technically, the model implements an iterative gradient descent optimizer operating directly on encrypted tensors (**Ciphertext-Ciphertext arithmetic**). The script handles the synchronization between the encrypted features and the target labels. To mitigate the **"Bootstrapping" bottleneck**, we apply architectural constraints: the depth of the computational graph is meticulously calculated to fit within the CKKS multiplicative depth. Non-linear operations, such as activations or logistic functions, are replaced by **Maclaurin-based polynomial approximations**, ensuring the model converges toward the global optimum while strictly preserving the integrity of the encrypted gradients.
+
+
 
 ---
 
 ## 📂 Repository Structure
 
-The project is modularized to separate quantum feature extraction, cryptographic context generation, and homomorphic training.
-
 ```text
 Aprendizaje_automatico_cifrado_homorfico/
 │
 ├── data/
-│   ├── raw/
-│   │   └── dataset_sintetico_1k.csv       # Raw spatial data (Plaintext)
-│   └── processed/
-│       └── datos_cifrados_ckks.pkl        # Encrypted QFT tensors (Generated)
+│   ├── raw/                 # Contains dataset_sintetico_*.csv
+│   └── qft/                 # Contains dataset_qft_*.csv
 │
 ├── src/
-│   ├── config/
-│   │   └── contexto_ckks.bytes            # SEAL cryptographic parameters
-│   ├── 01_qft_transform.py                # Maps spatial data to frequency domain (Qiskit)
-│   ├── 02_ckks_encryption.py              # Encrypts projected tensors using TenSEAL
-│   ├── 03_entrenamiento_ciego.py          # Executes blind gradient descent (LR, SVM, MLP)
-│   └── utils.py                           # Helper functions (Metrics, Plotting)
+│   ├── generar_datos_sinteticos.py        # Synthetic data generation tool
+│   ├── 01_procesamiento_qft.py            # Frequency domain projection (Qiskit/cuQuantum)
+│   ├── 02_cifrado_ckks.py                 # Context generation and CKKS encryption
+│   ├── 03_01_entrenamiento_ciego.py       # Blind training logic for LR, SVM, MLP
+│   └── config/
+│       └── contexto_ckks.bytes            # Cryptographic keys
 │
-├── notebooks/
-│   └── experiment_analysis.ipynb          # Jupyter notebook for interactive visualization
-│
-├── imagenes/
-│   ├── rl_grafico_convergencia.pdf        # Gradient convergence plots
-│   ├── rl_grafico_de_dispersion.pdf       # Predictive scatter plots
-│   └── rl_grafico_de_residuos.pdf         # Homoscedasticity residual analysis
-│
-├── requirements.txt                       # Python dependencies
-└── README.md                              # Project documentation
+├── requirements.txt
+└── README.md
