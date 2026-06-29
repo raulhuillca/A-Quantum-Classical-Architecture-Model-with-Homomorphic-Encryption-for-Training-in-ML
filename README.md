@@ -27,11 +27,11 @@ $$\text{QFT} \ket{k} = \frac{1}{\sqrt{N}} \sum_{j=0}^{N-1} e^{2\pi i k j / N} \k
 ### 2. Homomorphic Shielding (CKKS)
 We utilize the CKKS scheme for real-number arithmetic on encrypted data. The security relies on the Ring Learning With Errors (RLWE) problem over the cyclotomic ring $R_q = \mathbb{Z}_q[x]/(x^N + 1)$.
 
-
 ### 3. Adapted Models
 * **Logistic Regression:** Uses a 3rd-degree Maclaurin approximation for the sigmoid function: $h(z) \approx 0.5 + 0.25z - \frac{1}{48}z^3$.
 * **LS-SVM:** Uses Least-Squares optimization with $L_2$ regularization: $\nabla \beta_k = \nabla \beta_k^{base} + \lambda \beta_k$.
 * **MLP:** Employs a quadratic activation $f(z) = z^2$ to limit multiplicative depth to 3 levels.
+
 ---
 
 ## 📊 Data Pipeline and Processing
