@@ -42,6 +42,10 @@ The workflow follows a structured progression to ensure data integrity and priva
 2. **Frequency Projection (`01_procesamiento_qft.py`):** Takes a raw file (e.g., `dataset_sintetico_1k.csv`) and transforms it into `dataset_qft_1k.csv`. This script leverages Qiskit/cuQuantum to perform the QFT, mapping spatial features into an optimized frequency-domain representation.
 
 
+```
+Este es un bloque de código.
+```
+
 
 ---
 
