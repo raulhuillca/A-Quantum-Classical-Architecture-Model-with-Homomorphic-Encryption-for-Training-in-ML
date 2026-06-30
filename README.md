@@ -115,6 +115,12 @@ This module manages the cryptographic lifecycle:
 
 **Performance Note:** While our generator supports up to 1M records, the experimental validation is benchmarked at **1,000 vectors**. This choice is critical as encrypting and performing arithmetic on million-vector tensors requires massive distributed memory clusters that exceed the capacity of standard high-performance workstations.
 
+
+```
+Este es un bloque de código.
+```
+
+
 ---
 
 ## 🧠 Blind Training Methodology (`03_01_entrenamiento_ciego.py`)
