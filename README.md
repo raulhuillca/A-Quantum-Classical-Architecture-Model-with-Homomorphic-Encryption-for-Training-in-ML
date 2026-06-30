@@ -120,7 +120,6 @@ This module manages the cryptographic lifecycle:
 import tenseal as ts
 import pandas as pd
 import pickle
-
 archivo_entrada = "dataset_qft_1k.csv"
 archivo_contexto = "contexto_ckks.bytes"
 archivo_datos_cifrados = "datos_cifrados_ckks.pkl"
