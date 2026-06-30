@@ -147,6 +147,10 @@ diccionario_cifrado = {
     'y_mean': df_qft['y_mean'].iloc[0], # Guardamos los metadatos para el cliente
     'y_scale': df_qft['y_scale'].iloc[0]
 }
+with open(archivo_datos_cifrados, "wb") as f:
+    pickle.dump(diccionario_cifrado, f)
+
+print(f"[+] Datos cifrados guardados en {archivo_datos_cifrados}")
 ```
 
 
