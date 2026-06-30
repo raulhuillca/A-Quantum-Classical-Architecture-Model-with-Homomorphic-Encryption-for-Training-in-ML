@@ -120,6 +120,34 @@ This module manages the cryptographic lifecycle:
 import tenseal as ts
 import pandas as pd
 import pickle
+
+archivo_entrada = "dataset_qft_1k.csv"
+archivo_contexto = "contexto_ckks.bytes"
+archivo_datos_cifrados = "datos_cifrados_ckks.pkl"
+
+print("[*] Configurando Entorno CKKS...")
+context = ts.context(ts.SCHEME_TYPE.CKKS, poly_modulus_degree=8192, coeff_mod_bit_sizes=[60, 40, 40, 60])
+context.global_scale = 2**40
+context.generate_galois_keys()
+
+with open(archivo_contexto, "wb") as f:
+    f.write(context.serialize(save_secret_key=True))
+
+df_qft = pd.read_csv(archivo_entrada)
+# AHORA TOMAMOS 4 COLUMNAS (El bias + 3 Frecuencias)
+X_qft = df_qft[['bias', 'qft_f1', 'qft_f2', 'qft_f3']].values
+Y_target_scaled = df_qft['target_scaled'].values
+
+print("[*] Cifrando 4 vectores de características...")
+x_cifrado = [ts.ckks_vector(context, X_qft[:, i]) for i in range(4)]
+x_bytes = [vec.serialize() for vec in x_cifrado]
+
+diccionario_cifrado = {
+    'X_cifrado_bytes': x_bytes,
+    'Y_target_scaled': Y_target_scaled,
+    'y_mean': df_qft['y_mean'].iloc[0], # Guardamos los metadatos para el cliente
+    'y_scale': df_qft['y_scale'].iloc[0]
+}
 ```
 
 
