@@ -163,6 +163,10 @@ The "Blind Training" process enables the server to learn from data without ever 
 Technically, the model implements an iterative gradient descent optimizer operating directly on encrypted tensors (**Ciphertext-Ciphertext arithmetic**). The script handles the synchronization between the encrypted features and the target labels. To mitigate the **"Bootstrapping" bottleneck**, we apply architectural constraints: the depth of the computational graph is meticulously calculated to fit within the CKKS multiplicative depth. Non-linear operations, such as activations or logistic functions, are replaced by **Maclaurin-based polynomial approximations**, ensuring the model converges toward the global optimum while strictly preserving the integrity of the encrypted gradients.
 
 
+```
+Este es un bloque de código.
+```
+
 
 ---
 
