@@ -117,7 +117,9 @@ This module manages the cryptographic lifecycle:
 
 
 ```
-kkkkkk
+import tenseal as ts
+import pandas as pd
+import pickle
 ```
 
 
