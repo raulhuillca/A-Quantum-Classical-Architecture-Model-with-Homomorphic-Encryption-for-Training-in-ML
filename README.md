@@ -547,3 +547,59 @@ Los experimentos se llevaron a cabo utilizando el siguiente entorno computaciona
 - **Sistema Operativo:** Ubuntu 24.04.4 LTS
 - **CUDA:** CUDA 11.8
 - **Stack de Software:** Python 3.12, Qiskit 1.1.1, Qiskit Aer 0.15.1, TenSEAL 0.3.16, Microsoft SEAL, NumPy, Pandas, Scikit-learn, Matplotlib
+
+# 🏗️ Arquitectura del Sistema (Diagrama Generado)
+
+```flow
+st=>start: Datos Clásicos
+op1=>operation: FASE 1: Procesamiento (Datos Sintéticos, Normalización)
+op2=>operation: FASE 2: Transformación Cuántica (Codificación de Amplitud, QFT)
+op3=>operation: FASE 3: Protección Homomórfica (Frecuencia, Encriptación CKKS)
+op4=>operation: FASE 4: Aprendizaje Automático (RL, Regresión Logística, LS-SVM, MLP)
+e=>end: Evaluación
+
+st->op1->op2->op3->op4->e
+```
+
+# ⚙️ Flujo Avanzado: Arquitectura Cuántica-Clásica y Entrenamiento Cifrado
+
+```flow
+st=>start: Inicio: Conjunto de Datos Sintético
+fase1=>operation: FASE 1: Preprocesamiento Clásico (Normalización)
+fase2=>subroutine: FASE 2: Ejecución QFT (Representación de Frecuencia)
+fase3=>operation: FASE 3: Generación de Contexto y Encriptación CKKS
+init_ml=>operation: Inicializar Pesos del Modelo (RL, LS-SVM, MLP)
+cond_epochs=>condition: ¿Épocas < Límite (Ej. 150)?
+fase4_fwd=>operation: FASE 4: Operaciones Homomórficas (Sumas y Multiplicaciones)
+fase4_aprox=>operation: Aproximación Polinomial (Ej. Maclaurin de 3er grado)
+fase4_bwd=>operation: Actualización de Pesos Encriptados
+desencriptar=>subroutine: Desencriptación Controlada (Texto Plano Aproximado)
+evaluacion=>inputoutput: Evaluación de Métricas (MSE, R², Accuracy, F1)
+e=>end: Fin: Resultados Experimentales
+
+st->fase1->fase2->fase3->init_ml->cond_epochs
+cond_epochs(yes, right)->fase4_fwd->fase4_aprox->fase4_bwd(left)->cond_epochs
+cond_epochs(no)->desencriptar->evaluacion->e
+```
+
+# 🔄 Diagrama de Secuencia: Interacción Cuántica-Criptográfica
+
+```seq
+Title: Flujo de Procesamiento y Entrenamiento Homomórfico
+
+Participant Preprocesamiento Clásico
+Participant Módulo Cuántico (QFT)
+Participant Módulo Criptográfico (CKKS)
+Participant Modelo Machine Learning
+
+Preprocesamiento Clásico->Módulo Cuántico (QFT): Envía características normalizadas
+Note right of Módulo Cuántico (QFT): Ajuste de dimensión\nCodificación de amplitud\nEjecución QFT
+Módulo Cuántico (QFT)-->Preprocesamiento Clásico: Retorna representación de frecuencia (Compleja)
+Preprocesamiento Clásico->Módulo Criptográfico (CKKS): Envía vectores QFT
+Note right of Módulo Criptográfico (CKKS): Configuración BKZ\nRanuras CKKS: 4096\nGeneración de texto cifrado
+Módulo Criptográfico (CKKS)->Modelo Machine Learning: Envía Vectores Encriptados
+Note right of Modelo Machine Learning: Aproximación Polinomial\nOptimizador Basado en Gradiente
+Modelo Machine Learning->Modelo Machine Learning: Épocas de Entrenamiento (Operaciones Homomórficas)
+Modelo Machine Learning-->Preprocesamiento Clásico: Modelo Encriptado (Pesos Ajustados)
+Note left of Preprocesamiento Clásico: Desencriptación Controlada\nCálculo de MSE, R2, Accuracy
+```
