@@ -888,7 +888,33 @@ $$
 $$
 
 <hr>
+<hr>
 
+**Algoritmo 1:** Classical Preprocessing and Quantum Fourier Transform (QFT)
+
+<hr>
+
+$$
+\begin{flalign*}
+& \textsf{\textbf{Input:}} \textsf{ Classical feature vector } x = [x_0, x_1, \dots, x_{m-1}] & \\
+& \textsf{\textbf{Output:}} \textsf{ Frequency domain representation } X_{QFT} & \\
+& \textsf{\textbf{1}} \quad \textsf{\textbf{Initialize }} m \leftarrow \textsf{length}(x) & \\
+& \textsf{\textbf{2}} \quad q \leftarrow \lceil \log_2(m) \rceil \hspace{5.5cm} \textsf{// Calculate required qubits} & \\
+& \textsf{\textbf{3}} \quad N \leftarrow 2^q \hspace{6.3cm} \textsf{// Define target length} & \\
+& \textsf{\textbf{4}} \quad \textsf{\textbf{if }} m < N \textsf{\textbf{ then}} & \\
+& \textsf{\textbf{5}} \quad \quad x_{pad} \leftarrow \textsf{Pad}(x, \textsf{ zeros up to } N) & \\
+& \textsf{\textbf{6}} \quad \textsf{\textbf{end if}} & \\
+& \textsf{\textbf{7}} \quad norm \leftarrow \sqrt{\sum\limits_{i=0}^{N-1} |x_{pad, i}|^2} & \\
+& \textsf{\textbf{8}} \quad \textsf{\textbf{if }} norm \neq 0 \textsf{\textbf{ then}} & \\
+& \textsf{\textbf{9}} \quad \quad x_{norm} \leftarrow \frac{x_{pad}}{norm} & \\
+& \textsf{\textbf{10}} \quad \textsf{\textbf{end if}} & \\
+& \textsf{\textbf{11}} \quad |\psi\rangle \leftarrow \textsf{\textbf{AmplitudeEncoding}}(x_{norm}) \hspace{1.8cm} \textsf{// Map to quantum state} & \\
+& \textsf{\textbf{12}} \quad X_{QFT} \leftarrow \textsf{\textbf{ApplyQFT}}(|\psi\rangle) \hspace{3.4cm} \textsf{// Execute QFT circuit} & \\
+& \textsf{\textbf{13}} \quad \textsf{\textbf{return }} X_{QFT} &
+\end{flalign*}
+$$
+
+<hr>
 
 
 
