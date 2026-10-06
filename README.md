@@ -78,6 +78,8 @@ Evaluación
       ├── MAE
       ├── R²
       └── Precisión (Accuracy)
+```
+
 El propósito no es afirmar que la computación cuántica reemplaza al aprendizaje automático clásico, sino estudiar experimentalmente la integración de:
 
 - Transformación de características cuánticas.
@@ -86,7 +88,7 @@ El propósito no es afirmar que la computación cuántica reemplaza al aprendiza
 - Preservación de la privacidad.
 - Escalabilidad computacional.
 
-## 🎯 Objetivo de la Investigación
+### 🎯 Objetivo de la Investigación
 
 El objetivo principal es desarrollar y evaluar experimentalmente una arquitectura cuántica-clásica con encriptación homomórfica para aplicaciones de aprendizaje automático donde la privacidad de los datos es un requisito importante.
 
@@ -100,6 +102,7 @@ Encriptación Homomórfica
 Aprendizaje Automático
               +
 Preservación de la Privacidad
+```
 
 ### 🏗️ Arquitectura del Sistema
 
@@ -136,6 +139,8 @@ La arquitectura propuesta consta de cuatro fases principales.
 │                                                  │
 │     RL → Regresión Logística → LS-SVM → MLP      │
 └──────────────────────────────────────────────────┘
+```
+
 ### 📐 Fundamentos Matemáticos
 
 #### 1. Codificación de Amplitud
@@ -196,6 +201,8 @@ La cadena de procesamiento conceptual es:
              │
              ▼
    Texto Plano Aproximado
+```
+
 ### 📊 Canalización y Procesamiento de Datos
 
 El flujo experimental comienza con conjuntos de datos sintéticos que representan datos de consumo de energía. Las variables principales son:
@@ -226,6 +233,7 @@ La primera etapa genera los conjuntos de datos experimentales. Ejemplo:
 - `dataset_sintetico_1m.csv`
 
 Los datos generados son posteriormente normalizados antes del procesamiento cuántico.
+
 ### ⚛️ Transformada Cuántica de Fourier
 
 El módulo QFT recibe un vector de características y ajusta su dimensión a la potencia de dos más cercana.
@@ -251,6 +259,8 @@ def aplicar_qft_completa(data_vector):
 
     # Preparación del estado cuántico
     # seguido de la ejecución del circuito QFT
+```
+
 ### 🔐 Canal de Encriptación Homomórfica
 
 El módulo criptográfico se implementa utilizando TenSEAL, que proporciona integraciones en Python para la encriptación homomórfica basada en Microsoft SEAL.
@@ -265,6 +275,7 @@ La configuración experimental de CKKS es:
 | Escala global | $2^{40}$ |
 | Ranuras (slots) CKKS | 4096 |
 | Parámetro experimental BKZ | 450 |
+
 ### 🔒 Flujo de Datos CKKS
 
 ```plaintext
@@ -290,6 +301,8 @@ La configuración experimental de CKKS es:
                │
                ▼
            Evaluación
+```
+
 ### 🧠 Modelos de Aprendizaje Automático
 
 La arquitectura soporta varios modelos de aprendizaje automático adaptados a las características numéricas del cálculo encriptado.
@@ -331,17 +344,20 @@ El modelo se evalúa utilizando la precisión de clasificación.
 #### 4. Perceptrón Multicapa (MLP)
 
 La arquitectura experimental del MLP es:
+
 ```plaintext
-Entrada
-  │
-  ▼
-3 neuronas
-  │
-  ▼
-4 neuronas
-  │
-  ▼
-1 salida
+   Entrada
+      │
+      ▼
+  3 neuronas
+      │
+      ▼
+  4 neuronas
+      │
+      ▼
+   1 salida
+```
+
 ### 🧪 Configuración Experimental
 
 La comparación experimental evalúa dos configuraciones principales:
@@ -353,8 +369,8 @@ Representación Espacial Clásica
                │
                ▼
      Aprendizaje Automático
-	 
-	 
+```
+
 **Configuración B**
 
 ```plaintext
@@ -365,7 +381,10 @@ Representación de Frecuencia QFT
                │
                ▼
      Aprendizaje Automático
+```
+
 Se utilizan los mismos conjuntos de datos y condiciones experimentales controladas siempre que sea posible.
+
 ### 📈 Métricas de Evaluación
 
 #### Métricas de Regresión
@@ -459,6 +478,7 @@ Los tiempos de ejecución medidos para QFT en GPU fueron:
 Estos resultados muestran el costo computacional asociado con la aplicación de la transformación QFT a medida que aumenta el tamaño del conjunto de datos.
 
 ### ⏱️ Estructura del Repositorio
+
 ```text
 Aprendizaje_automatico_cifrado_homorfico/
 │
@@ -494,6 +514,7 @@ Aprendizaje_automatico_cifrado_homorfico/
 ├── requirements.txt
 ├── README.md
 └── LICENSE
+```
 
 ### 🚀 Instalación
 
@@ -502,6 +523,7 @@ Aprendizaje_automatico_cifrado_homorfico/
 ```bash
 git clone [https://github.com/USUARIO/REPOSITORIO.git](https://github.com/USUARIO/REPOSITORIO.git)
 cd REPOSITORIO
+```
 
 ### 2. Instalar Dependencias
 
@@ -513,6 +535,7 @@ pip install matplotlib
 pip install qiskit==1.1.1
 pip install qiskit-aer==0.15.1
 pip install tenseal==0.3.16
+```
 
 ### 💻 Hardware y Entorno
 
