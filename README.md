@@ -652,3 +652,26 @@ sequenceDiagram
 **9** &nbsp;**return** $\beta_0, \beta_1, \dots, \beta_m$
 
 <hr>
+
+
+<hr>
+
+**Algoritmo 7:** Homomorphic Multiple Linear Regression Training
+
+<hr>
+
+**Input:** Encrypted QFT-transformed feature matrix $X = \{x\sb{1}, \dots, x\sb{n}\}$, target vector <br> 
+&emsp;&emsp;&emsp; $Y = \{y\sb{1}, \dots, y\sb{n}\}$, learning rate $\alpha$, number of iterations $num\_iter$ <br>
+**Output:** Encrypted model coefficients $\beta\sb{0}, \beta\sb{1}, \dots, \beta\sb{m}$
+
+**1** &nbsp;Initialize $\beta\sb{0}, \beta\sb{1}, \dots, \beta\sb{m} \leftarrow 0.01$ <br>
+**2** &nbsp;**for** $i = 1$ **to** $num\_iter$ **do** <br>
+**3** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**for** $j = 1$ **to** $n$ **do** <br>
+**4** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$\hat{y}\sb{j} \leftarrow \beta\sb{0} + \sum\sb{k=1}\sp{m} \beta\sb{k} \cdot x\sb{jk}$ <br>
+**5** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$e\sb{j} \leftarrow \hat{y}\sb{j} - y\sb{j}$ <br>
+**6** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**for** $k = 0$ **to** $m$ **do** <br>
+**7** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$grad\sb{k} \leftarrow \frac{1}{n} \sum\sb{j=1}\sp{n} e\sb{j} \cdot x\sb{jk}$ &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; `//` $x\sb{j0} = 1$ <br>
+**8** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$\beta\sb{k} \leftarrow \beta\sb{k} - \alpha \cdot grad\sb{k}$ <br>
+**9** &nbsp;**return** $\beta\sb{0}, \beta\sb{1}, \dots, \beta\sb{m}$
+
+<hr>
