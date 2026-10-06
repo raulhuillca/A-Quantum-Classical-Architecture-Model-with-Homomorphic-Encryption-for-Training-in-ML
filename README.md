@@ -551,7 +551,8 @@ Los experimentos se llevaron a cabo utilizando el siguiente entorno computaciona
 
 # 🏗️ Arquitectura del Sistema (Diagrama Generado)
 
-```flow
+```mermaid
+flowchart TD
 st=>start: Datos Clásicos
 op1=>operation: FASE 1: Procesamiento (Datos Sintéticos, Normalización)
 op2=>operation: FASE 2: Transformación Cuántica (Codificación de Amplitud, QFT)
