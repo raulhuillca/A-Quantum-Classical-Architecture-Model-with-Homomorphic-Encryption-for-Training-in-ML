@@ -548,7 +548,8 @@ Los experimentos se llevaron a cabo utilizando el siguiente entorno computaciona
 - **CUDA:** CUDA 11.8
 - **Stack de Software:** Python 3.12, Qiskit 1.1.1, Qiskit Aer 0.15.1, TenSEAL 0.3.16, Microsoft SEAL, NumPy, Pandas, Scikit-learn, Matplotlib
 
-### 🏗️ Arquitectura del Sistema (Diagrama Generado)
+
+# 🏗️ Arquitectura del Sistema (Diagrama Generado)
 
 ```flow
 st=>start: Datos Clásicos
