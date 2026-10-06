@@ -604,3 +604,5 @@ sequenceDiagram
     
     Note left of P: Desencriptación Controlada<br/>Cálculo de MSE, R², Accuracy
 ```
+
+<img width="1299" height="697" alt="Cifrado Homomórfico CKKS de Amplitudes Cuánticas" src="https://github.com/user-attachments/assets/146ec4fe-58c6-4ac4-9449-c1a5b1be69e0" />
