@@ -676,16 +676,17 @@ sequenceDiagram
 
 <hr>
 
+
 $$
 \begin{array}{l}
 \hline
 \textbf{Algoritmo 7:} \text{ Homomorphic Multiple Linear Regression Training} \\
 \hline
 \textbf{Input:} \text{ Encrypted QFT-transformed feature matrix } X = \{x_1, \dots, x_n\}\text{, target vector} \\
-\quad Y = \{y_1, \dots, y_n\}\text{, learning rate } \alpha\text{, number of iterations } \text{num\_iter} \\
+\quad Y = \{y_1, \dots, y_n\}\text{, learning rate } \alpha\text{, number of iterations } num_{iter} \\
 \textbf{Output:} \text{ Encrypted model coefficients } \beta_0, \beta_1, \dots, \beta_m \\
 \mathbf{1} \quad \text{Initialize } \beta_0, \beta_1, \dots, \beta_m \leftarrow 0.01 \\
-\mathbf{2} \quad \textbf{for } i = 1 \textbf{ to } \text{num\_iter} \textbf{ do} \\
+\mathbf{2} \quad \textbf{for } i = 1 \textbf{ to } num_{iter} \textbf{ do} \\
 \mathbf{3} \quad \quad \textbf{for } j = 1 \textbf{ to } n \textbf{ do} \\
 \mathbf{4} \quad \quad \quad \hat{y}_j \leftarrow \beta_0 + \sum_{k=1}^{m} \beta_k \cdot x_{jk} \\
 \mathbf{5} \quad \quad \quad e_j \leftarrow \hat{y}_j - y_j \\
