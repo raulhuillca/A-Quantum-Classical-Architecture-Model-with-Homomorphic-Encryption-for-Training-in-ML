@@ -814,3 +814,28 @@ $$
 **9** &emsp;**return** $\beta_0, \beta_1, \dots, \beta_m$
 
 <hr>
+
+
+<hr>
+
+<p><b>Algoritmo 7:</b> Homomorphic Multiple Linear Regression Training</p>
+
+<hr>
+
+<div>
+<b>Input:</b> Encrypted QFT-transformed feature matrix $X = \{x_1, \dots, x_n\}$, target vector <br> 
+&emsp;&emsp;&emsp;&nbsp; $Y = \{y_1, \dots, y_n\}$, learning rate $\alpha$, number of iterations $num_{iter}$ <br>
+<b>Output:</b> Encrypted model coefficients $\beta_0, \beta_1, \dots, \beta_m$ <br><br>
+
+<b>1</b> &emsp;<b>Initialize</b> $\beta_0, \beta_1, \dots, \beta_m \leftarrow 0.01$ <br>
+<b>2</b> &emsp;<b>for</b> $i = 1$ <b>to</b> $num_{iter}$ <b>do</b> <br>
+<b>3</b> &emsp;&emsp;&emsp;<b>for</b> $j = 1$ <b>to</b> $n$ <b>do</b> <br>
+<b>4</b> &emsp;&emsp;&emsp;&emsp;&emsp;$\hat{y}_j \leftarrow \beta_0 + \sum_{k=1}^{m} \beta_k \cdot x_{jk}$ <br>
+<b>5</b> &emsp;&emsp;&emsp;&emsp;&emsp;$e_j \leftarrow \hat{y}_j - y_j$ <br>
+<b>6</b> &emsp;&emsp;&emsp;<b>for</b> $k = 0$ <b>to</b> $m$ <b>do</b> <br>
+<b>7</b> &emsp;&emsp;&emsp;&emsp;&emsp;$grad_k \leftarrow \frac{1}{n} \sum_{j=1}^{n} e_j \cdot x_{jk}$ &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; <code>//</code> $x_{j0} = 1$ <br>
+<b>8</b> &emsp;&emsp;&emsp;&emsp;&emsp;$\beta_k \leftarrow \beta_k - \alpha \cdot grad_k$ <br>
+<b>9</b> &emsp;<b>return</b> $\beta_0, \beta_1, \dots, \beta_m$
+</div>
+
+<hr>
