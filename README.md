@@ -553,14 +553,11 @@ Los experimentos se llevaron a cabo utilizando el siguiente entorno computaciona
 
 ```mermaid
 flowchart TD
-st=>start: Datos Clásicos
-op1=>operation: FASE 1: Procesamiento (Datos Sintéticos, Normalización)
-op2=>operation: FASE 2: Transformación Cuántica (Codificación de Amplitud, QFT)
-op3=>operation: FASE 3: Protección Homomórfica (Frecuencia, Encriptación CKKS)
-op4=>operation: FASE 4: Aprendizaje Automático (RL, Regresión Logística, LS-SVM, MLP)
-e=>end: Evaluación
-
-st->op1->op2->op3->op4->e
+    st([Datos Clásicos]) --> op1[FASE 1: Procesamiento <br/> Datos Sintéticos, Normalización]
+    op1 --> op2[FASE 2: Transformación Cuántica <br/> Codificación de Amplitud, QFT]
+    op2 --> op3[FASE 3: Protección Homomórfica <br/> Frecuencia, Encriptación CKKS]
+    op3 --> op4[FASE 4: Aprendizaje Automático <br/> RL, Regresión Logística, LS-SVM, MLP]
+    op4 --> e([Evaluación])
 ```
 
 # ⚙️ Flujo Avanzado: Arquitectura Cuántica-Clásica y Entrenamiento Cifrado
