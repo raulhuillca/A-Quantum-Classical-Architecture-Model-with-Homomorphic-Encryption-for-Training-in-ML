@@ -562,23 +562,22 @@ flowchart TD
 
 # ⚙️ Flujo Avanzado: Arquitectura Cuántica-Clásica y Entrenamiento Cifrado
 
-```flow
-st=>start: Inicio: Conjunto de Datos Sintético
-fase1=>operation: FASE 1: Preprocesamiento Clásico (Normalización)
-fase2=>subroutine: FASE 2: Ejecución QFT (Representación de Frecuencia)
-fase3=>operation: FASE 3: Generación de Contexto y Encriptación CKKS
-init_ml=>operation: Inicializar Pesos del Modelo (RL, LS-SVM, MLP)
-cond_epochs=>condition: ¿Épocas < Límite (Ej. 150)?
-fase4_fwd=>operation: FASE 4: Operaciones Homomórficas (Sumas y Multiplicaciones)
-fase4_aprox=>operation: Aproximación Polinomial (Ej. Maclaurin de 3er grado)
-fase4_bwd=>operation: Actualización de Pesos Encriptados
-desencriptar=>subroutine: Desencriptación Controlada (Texto Plano Aproximado)
-evaluacion=>inputoutput: Evaluación de Métricas (MSE, R², Accuracy, F1)
-e=>end: Fin: Resultados Experimentales
-
-st->fase1->fase2->fase3->init_ml->cond_epochs
-cond_epochs(yes, right)->fase4_fwd->fase4_aprox->fase4_bwd(left)->cond_epochs
-cond_epochs(no)->desencriptar->evaluacion->e
+```mermaid
+flowchart TD
+    st([Inicio: Conjunto de Datos Sintético]) --> fase1[FASE 1: Preprocesamiento Clásico <br/> Normalización]
+    fase1 --> fase2[[FASE 2: Ejecución QFT <br/> Representación de Frecuencia]]
+    fase2 --> fase3[FASE 3: Generación de Contexto y Encriptación CKKS]
+    fase3 --> init_ml[Inicializar Pesos del Modelo <br/> RL, LS-SVM, MLP]
+    init_ml --> cond_epochs{¿Épocas < Límite <br/> Ej. 150?}
+    
+    cond_epochs -- Sí --> fase4_fwd[FASE 4: Operaciones Homomórficas <br/> Sumas y Multiplicaciones]
+    fase4_fwd --> fase4_aprox[Aproximación Polinomial <br/> Ej. Maclaurin de 3er grado]
+    fase4_aprox --> fase4_bwd[Actualización de Pesos Encriptados]
+    fase4_bwd --> cond_epochs
+    
+    cond_epochs -- No --> desencriptar[[Desencriptación Controlada <br/> Texto Plano Aproximado]]
+    desencriptar --> evaluacion[/Evaluación de Métricas <br/> MSE, R², Accuracy, F1/]
+    evaluacion --> e([Fin: Resultados Experimentales])
 ```
 
 # 🔄 Diagrama de Secuencia: Interacción Cuántica-Criptográfica
