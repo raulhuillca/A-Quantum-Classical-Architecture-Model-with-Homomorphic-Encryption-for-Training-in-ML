@@ -938,3 +938,28 @@ $$
 $$
 
 <hr>
+
+<hr>
+
+**Algoritmo 7:** Homomorphic Multiple Linear Regression Training
+
+<hr>
+
+$$
+\begin{flalign*}
+& \text{\textbf{Input:}} \text{ Encrypted QFT-transformed feature matrix } X = \{x_1, \dots, x_n\}\text{, target vector} & \\
+& \quad Y = \{y_1, \dots, y_n\}\text{, learning rate } \alpha\text{, number of iterations } num_{iter} & \\
+& \text{\textbf{Output:}} \text{ Encrypted model coefficients } \beta_0, \beta_1, \dots, \beta_m & \\
+& 1 \quad \text{\textbf{Initialize }} \beta_0, \beta_1, \dots, \beta_m \leftarrow 0.01 & \\
+& 2 \quad \text{\textbf{for }} i = 1 \text{\textbf{ to }} num_{iter} \text{\textbf{ do}} & \\
+& 3 \quad \quad \text{\textbf{for }} j = 1 \text{\textbf{ to }} n \text{\textbf{ do}} & \\
+& 4 \quad \quad \quad \hat{y}_j \leftarrow \beta_0 + \sum\limits_{k=1}^{m} \beta_k \cdot x_{jk} & \\
+& 5 \quad \quad \quad e_j \leftarrow \hat{y}_j - y_j & \\
+& 6 \quad \quad \text{\textbf{for }} k = 0 \text{\textbf{ to }} m \text{\textbf{ do}} & \\
+& 7 \quad \quad \quad grad_k \leftarrow \frac{1}{n} \sum\limits_{j=1}^{n} e_j \cdot x_{jk} \hspace{4cm} \text{// } x_{j0} = 1 & \\
+& 8 \quad \quad \quad \beta_k \leftarrow \beta_k - \alpha \cdot grad_k & \\
+& 9 \quad \text{\textbf{return }} \beta_0, \beta_1, \dots, \beta_m &
+\end{flalign*}
+$$
+
+<hr>
