@@ -86,7 +86,7 @@ El propósito no es afirmar que la computación cuántica reemplaza al aprendiza
 - Preservación de la privacidad.
 - Escalabilidad computacional.
 
-### 🎯 Objetivo de la Investigación
+## 🎯 Objetivo de la Investigación
 
 El objetivo principal es desarrollar y evaluar experimentalmente una arquitectura cuántica-clásica con encriptación homomórfica para aplicaciones de aprendizaje automático donde la privacidad de los datos es un requisito importante.
 
