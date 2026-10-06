@@ -609,3 +609,23 @@ sequenceDiagram
 
 [Solicitud a bienestar universitario.pdf](https://github.com/user-attachments/files/33113369/Solicitud.a.bienestar.universitario.pdf)
 
+
+### 📝 Algoritmo 1: Preprocesamiento y Transformación QFT
+
+**Entrada:** Vector de características clásico $x = [x_0, x_1, \ldots, x_{m-1}]$
+**Salida:** Representación en el dominio de la frecuencia $X_{QFT}$
+**Parámetros:** $N$ (longitud objetivo)
+
+1. **Inicializar** $m \leftarrow \text{longitud}(x)$
+2. **Calcular** número de qubits requeridos: $q \leftarrow \lceil \log_2(m) \rceil$
+3. **Definir** longitud objetivo: $N \leftarrow 2^q$
+4. **Si** $m < N$ **entonces**
+5. &nbsp;&nbsp;&nbsp;&nbsp; $x_{pad} \leftarrow \text{Pad}(x, \text{ceros hasta } N)$
+6. **Fin Si**
+7. **Calcular** norma: $\text{norma} \leftarrow \sqrt{\sum |x_{pad}|^2}$
+8. **Si** $\text{norma} \neq 0$ **entonces**
+9. &nbsp;&nbsp;&nbsp;&nbsp; $x_{norm} \leftarrow x_{pad} / \text{norma}$
+10. **Fin Si**
+11. **Aplicar** Codificación de Amplitud sobre $x_{norm}$ para obtener $|\psi\rangle$
+12. **Aplicar** circuito QFT sobre $|\psi\rangle$
+13. **Retornar** amplitudes resultantes $X_{QFT}$
