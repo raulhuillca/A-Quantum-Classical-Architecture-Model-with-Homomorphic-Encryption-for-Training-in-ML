@@ -748,3 +748,25 @@ $$
 $$
 
 <hr>
+
+<hr>
+
+**Algoritmo 7:** Homomorphic Multiple Linear Regression Training
+
+<hr>
+
+**Input:** Encrypted QFT-transformed feature matrix $X = \{x\sb{1}, \dots, x\sb{n}\}$, target vector <br> 
+&emsp;&emsp;&emsp;&nbsp; $Y = \{y\sb{1}, \dots, y\sb{n}\}$, learning rate $\alpha$, number of iterations $num\sb{iter}$ <br>
+**Output:** Encrypted model coefficients $\beta\sb{0}, \beta\sb{1}, \dots, \beta\sb{m}$
+
+**1** &emsp;**Initialize** $\beta\sb{0}, \beta\sb{1}, \dots, \beta\sb{m} \leftarrow 0.01$ <br>
+**2** &emsp;**for** $i = 1$ **to** $num\sb{iter}$ **do** <br>
+**3** &emsp;&emsp;&emsp;**for** $j = 1$ **to** $n$ **do** <br>
+**4** &emsp;&emsp;&emsp;&emsp;&emsp;$\hat{y}\sb{j} \leftarrow \beta\sb{0} + \sum\sb{k=1}\sp{m} \beta\sb{k} \cdot x\sb{jk}$ <br>
+**5** &emsp;&emsp;&emsp;&emsp;&emsp;$e\sb{j} \leftarrow \hat{y}\sb{j} - y\sb{j}$ <br>
+**6** &emsp;&emsp;&emsp;**for** $k = 0$ **to** $m$ **do** <br>
+**7** &emsp;&emsp;&emsp;&emsp;&emsp;$grad\sb{k} \leftarrow \frac{1}{n} \sum\sb{j=1}\sp{n} e\sb{j} \cdot x\sb{jk}$ &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; `//` $x\sb{j0} = 1$ <br>
+**8** &emsp;&emsp;&emsp;&emsp;&emsp;$\beta\sb{k} \leftarrow \beta\sb{k} - \alpha \cdot grad\sb{k}$ <br>
+**9** &emsp;**return** $\beta\sb{0}, \beta\sb{1}, \dots, \beta\sb{m}$
+
+<hr>
