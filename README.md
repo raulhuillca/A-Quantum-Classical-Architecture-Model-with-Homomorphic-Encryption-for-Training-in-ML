@@ -629,3 +629,26 @@ sequenceDiagram
 11. **Aplicar** Codificación de Amplitud sobre $x_{norm}$ para obtener $|\psi\rangle$
 12. **Aplicar** circuito QFT sobre $|\psi\rangle$
 13. **Retornar** amplitudes resultantes $X_{QFT}$
+
+
+<hr>
+
+**Algoritmo 7:** Homomorphic Multiple Linear Regression Training
+
+<hr>
+
+**Input:** Encrypted QFT-transformed feature matrix $X = \{x_1, \dots, x_n\}$, target vector <br> 
+&emsp;&emsp;&emsp; $Y = \{y_1, \dots, y_n\}$, learning rate $\alpha$, number of iterations $num\_iter$ <br>
+**Output:** Encrypted model coefficients $\beta_0, \beta_1, \dots, \beta_m$
+
+**1** &nbsp;Initialize $\beta_0, \beta_1, \dots, \beta_m \leftarrow 0.01$ <br>
+**2** &nbsp;**for** $i = 1$ **to** $num\_iter$ **do** <br>
+**3** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**for** $j = 1$ **to** $n$ **do** <br>
+**4** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$\hat{y}_j \leftarrow \beta_0 + \sum_{k=1}^{m} \beta_k \cdot x_{jk}$ <br>
+**5** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$e_j \leftarrow \hat{y}_j - y_j$ <br>
+**6** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**for** $k = 0$ **to** $m$ **do** <br>
+**7** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$grad_k \leftarrow \frac{1}{n} \sum_{j=1}^{n} e_j \cdot x_{jk}$ &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; `//` $x_{j0} = 1$ <br>
+**8** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$\beta_k \leftarrow \beta_k - \alpha \cdot grad_k$ <br>
+**9** &nbsp;**return** $\beta_0, \beta_1, \dots, \beta_m$
+
+<hr>
