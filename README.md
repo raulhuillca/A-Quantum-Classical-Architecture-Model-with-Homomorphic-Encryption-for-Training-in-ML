@@ -582,22 +582,25 @@ flowchart TD
 
 # 🔄 Diagrama de Secuencia: Interacción Cuántica-Criptográfica
 
-```seq
-Title: Flujo de Procesamiento y Entrenamiento Homomórfico
+```mermaid
+sequenceDiagram
+    participant P as Preprocesamiento Clásico
+    participant Q as Módulo Cuántico (QFT)
+    participant C as Módulo Criptográfico (CKKS)
+    participant M as Modelo Machine Learning
 
-Participant Preprocesamiento Clásico
-Participant Módulo Cuántico (QFT)
-Participant Módulo Criptográfico (CKKS)
-Participant Modelo Machine Learning
-
-Preprocesamiento Clásico->Módulo Cuántico (QFT): Envía características normalizadas
-Note right of Módulo Cuántico (QFT): Ajuste de dimensión\nCodificación de amplitud\nEjecución QFT
-Módulo Cuántico (QFT)-->Preprocesamiento Clásico: Retorna representación de frecuencia (Compleja)
-Preprocesamiento Clásico->Módulo Criptográfico (CKKS): Envía vectores QFT
-Note right of Módulo Criptográfico (CKKS): Configuración BKZ\nRanuras CKKS: 4096\nGeneración de texto cifrado
-Módulo Criptográfico (CKKS)->Modelo Machine Learning: Envía Vectores Encriptados
-Note right of Modelo Machine Learning: Aproximación Polinomial\nOptimizador Basado en Gradiente
-Modelo Machine Learning->Modelo Machine Learning: Épocas de Entrenamiento (Operaciones Homomórficas)
-Modelo Machine Learning-->Preprocesamiento Clásico: Modelo Encriptado (Pesos Ajustados)
-Note left of Preprocesamiento Clásico: Desencriptación Controlada\nCálculo de MSE, R2, Accuracy
+    P->>Q: Envía características normalizadas
+    Note right of Q: Ajuste de dimensión<br/>Codificación de amplitud<br/>Ejecución QFT
+    Q-->>P: Retorna representación de frecuencia (Compleja)
+    
+    P->>C: Envía vectores QFT
+    Note right of C: Configuración BKZ<br/>Ranuras CKKS: 4096<br/>Generación de texto cifrado
+    
+    C->>M: Envía Vectores Encriptados
+    Note right of M: Aproximación Polinomial<br/>Optimizador Basado en Gradiente
+    
+    M->>M: Épocas de Entrenamiento (Operaciones Homomórficas)
+    M-->>P: Modelo Encriptado (Pesos Ajustados)
+    
+    Note left of P: Desencriptación Controlada<br/>Cálculo de MSE, R², Accuracy
 ```
