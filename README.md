@@ -771,98 +771,7 @@ $$
 
 <hr>
 
-<hr>
 
-**Algoritmo 7:** Homomorphic Multiple Linear Regression Training
-
-<hr>
-
-**Input:** Encrypted QFT-transformed feature matrix $X = \{ x _ 1, \dots, x _ n \}$, target vector <br> 
-&emsp;&emsp;&emsp;&nbsp; $Y = \{ y _ 1, \dots, y _ n \}$, learning rate $\alpha$, number of iterations $num _ {iter}$ <br>
-**Output:** Encrypted model coefficients $\beta _ 0, \beta _ 1, \dots, \beta _ m$
-
-**1** &emsp;**Initialize** $\beta _ 0, \beta _ 1, \dots, \beta _ m \leftarrow 0.01$ <br>
-**2** &emsp;**for** $i = 1$ **to** $num _ {iter}$ **do** <br>
-**3** &emsp;&emsp;&emsp;**for** $j = 1$ **to** $n$ **do** <br>
-**4** &emsp;&emsp;&emsp;&emsp;&emsp;$\hat{y} _ j \leftarrow \beta _ 0 + \sum _ {k=1} ^{m} \beta _ k \cdot x _ {jk}$ <br>
-**5** &emsp;&emsp;&emsp;&emsp;&emsp;$e _ j \leftarrow \hat{y} _ j - y _ j$ <br>
-**6** &emsp;&emsp;&emsp;**for** $k = 0$ **to** $m$ **do** <br>
-**7** &emsp;&emsp;&emsp;&emsp;&emsp;$grad _ k \leftarrow \frac{1}{n} \sum _ {j=1} ^{n} e _ j \cdot x _ {jk}$ &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; `//` $x _ {j0} = 1$ <br>
-**8** &emsp;&emsp;&emsp;&emsp;&emsp;$\beta _ k \leftarrow \beta _ k - \alpha \cdot grad _ k$ <br>
-**9** &emsp;**return** $\beta _ 0, \beta _ 1, \dots, \beta _ m$
-
-<hr>
-
-<hr>
-
-**Algoritmo 7:** Homomorphic Multiple Linear Regression Training
-
-<hr>
-
-**Input:** Encrypted QFT-transformed feature matrix $X = \{x_1, \dots, x_n\}$, target vector <br> 
-&emsp;&emsp;&emsp;&nbsp; $Y = \{y_1, \dots, y_n\}$, learning rate $\alpha$, number of iterations $num_{iter}$ <br>
-**Output:** Encrypted model coefficients $\beta_0, \beta_1, \dots, \beta_m$
-
-**1** &emsp;**Initialize** $\beta_0, \beta_1, \dots, \beta_m \leftarrow 0.01$ <br>
-**2** &emsp;**for** $i = 1$ **to** $num_{iter}$ **do** <br>
-**3** &emsp;&emsp;&emsp;**for** $j = 1$ **to** $n$ **do** <br>
-**4** &emsp;&emsp;&emsp;&emsp;&emsp;$\hat{y}_j \leftarrow \beta_0 + \sum_{k=1}^{m} \beta_k \cdot x_{jk}$ <br>
-**5** &emsp;&emsp;&emsp;&emsp;&emsp;$e_j \leftarrow \hat{y}_j - y_j$ <br>
-**6** &emsp;&emsp;&emsp;**for** $k = 0$ **to** $m$ **do** <br>
-**7** &emsp;&emsp;&emsp;&emsp;&emsp;$grad_k \leftarrow \frac{1}{n} \sum_{j=1}^{n} e_j \cdot x_{jk}$ &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; `//` $x_{j0} = 1$ <br>
-**8** &emsp;&emsp;&emsp;&emsp;&emsp;$\beta_k \leftarrow \beta_k - \alpha \cdot grad_k$ <br>
-**9** &emsp;**return** $\beta_0, \beta_1, \dots, \beta_m$
-
-<hr>
-
-
-<hr>
-
-<p><b>Algoritmo 7:</b> Homomorphic Multiple Linear Regression Training</p>
-
-<hr>
-
-<div>
-<b>Input:</b> Encrypted QFT-transformed feature matrix $X = \{x_1, \dots, x_n\}$, target vector <br> 
-&emsp;&emsp;&emsp;&nbsp; $Y = \{y_1, \dots, y_n\}$, learning rate $\alpha$, number of iterations $num_{iter}$ <br>
-<b>Output:</b> Encrypted model coefficients $\beta_0, \beta_1, \dots, \beta_m$ <br><br>
-
-<b>1</b> &emsp;<b>Initialize</b> $\beta_0, \beta_1, \dots, \beta_m \leftarrow 0.01$ <br>
-<b>2</b> &emsp;<b>for</b> $i = 1$ <b>to</b> $num_{iter}$ <b>do</b> <br>
-<b>3</b> &emsp;&emsp;&emsp;<b>for</b> $j = 1$ <b>to</b> $n$ <b>do</b> <br>
-<b>4</b> &emsp;&emsp;&emsp;&emsp;&emsp;$\hat{y}_j \leftarrow \beta_0 + \sum_{k=1}^{m} \beta_k \cdot x_{jk}$ <br>
-<b>5</b> &emsp;&emsp;&emsp;&emsp;&emsp;$e_j \leftarrow \hat{y}_j - y_j$ <br>
-<b>6</b> &emsp;&emsp;&emsp;<b>for</b> $k = 0$ <b>to</b> $m$ <b>do</b> <br>
-<b>7</b> &emsp;&emsp;&emsp;&emsp;&emsp;$grad_k \leftarrow \frac{1}{n} \sum_{j=1}^{n} e_j \cdot x_{jk}$ &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; <code>//</code> $x_{j0} = 1$ <br>
-<b>8</b> &emsp;&emsp;&emsp;&emsp;&emsp;$\beta_k \leftarrow \beta_k - \alpha \cdot grad_k$ <br>
-<b>9</b> &emsp;<b>return</b> $\beta_0, \beta_1, \dots, \beta_m$
-</div>
-
-<hr>
-
-<hr>
-
-<p><b>Algoritmo 7:</b> Homomorphic Multiple Linear Regression Training</p>
-
-<hr>
-
-<div>
-<b>Input:</b> Encrypted QFT-transformed feature matrix $X = \{x_1, \dots, x_n\}$, target vector <br> 
-&emsp;&emsp;&emsp;&nbsp; $Y = \{y_1, \dots, y_n\}$, learning rate $\alpha$, number of iterations $num_{iter}$ <br>
-<b>Output:</b> Encrypted model coefficients $\beta_0, \beta_1, \dots, \beta_m$ <br><br>
-
-<b>1</b> &emsp;<b>Initialize</b> $\beta_0, \beta_1, \dots, \beta_m \leftarrow 0.01$ <br>
-<b>2</b> &emsp;<b>for</b> $i = 1$ <b>to</b> $num_{iter}$ <b>do</b> <br>
-<b>3</b> &emsp;&emsp;&emsp;<b>for</b> $j = 1$ <b>to</b> $n$ <b>do</b> <br>
-<b>4</b> &emsp;&emsp;&emsp;&emsp;&emsp;$\hat{y}_j \leftarrow \beta_0 + \sum_{k=1}^{m} \beta_k \cdot x_{jk}$ <br>
-<b>5</b> &emsp;&emsp;&emsp;&emsp;&emsp;$e_j \leftarrow \hat{y}_j - y_j$ <br>
-<b>6</b> &emsp;&emsp;&emsp;<b>for</b> $k = 0$ <b>to</b> $m$ <b>do</b> <br>
-<b>7</b> &emsp;&emsp;&emsp;&emsp;&emsp;$grad_k \leftarrow \frac{1}{n} \sum_{j=1}^{n} e_j \cdot x_{jk}$ &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp; <code>//</code> $x_{j0} = 1$ <br>
-<b>8</b> &emsp;&emsp;&emsp;&emsp;&emsp;$\beta_k \leftarrow \beta_k - \alpha \cdot grad_k$ <br>
-<b>9</b> &emsp;<b>return</b> $\beta_0, \beta_1, \dots, \beta_m$
-</div>
-
-<hr>
 
 <hr>
 
@@ -888,34 +797,7 @@ $$
 $$
 
 <hr>
-<hr>
 
-**Algoritmo 1:** Classical Preprocessing and Quantum Fourier Transform (QFT)
-
-<hr>
-
-$$
-\begin{flalign*}
-& \textsf{\textbf{Input:}} \textsf{ Classical feature vector } x = [x_0, x_1, \dots, x_{m-1}] & \\
-& \textsf{\textbf{Output:}} \textsf{ Frequency domain representation } X_{QFT} & \\
-& \textsf{\textbf{1}} \quad \textsf{\textbf{Initialize }} m \leftarrow \textsf{length}(x) & \\
-& \textsf{\textbf{2}} \quad q \leftarrow \lceil \log_2(m) \rceil \hspace{5.5cm} \textsf{// Calculate required qubits} & \\
-& \textsf{\textbf{3}} \quad N \leftarrow 2^q \hspace{6.3cm} \textsf{// Define target length} & \\
-& \textsf{\textbf{4}} \quad \textsf{\textbf{if }} m < N \textsf{\textbf{ then}} & \\
-& \textsf{\textbf{5}} \quad \quad x_{pad} \leftarrow \textsf{Pad}(x, \textsf{ zeros up to } N) & \\
-& \textsf{\textbf{6}} \quad \textsf{\textbf{end if}} & \\
-& \textsf{\textbf{7}} \quad norm \leftarrow \sqrt{\sum\limits_{i=0}^{N-1} |x_{pad, i}|^2} & \\
-& \textsf{\textbf{8}} \quad \textsf{\textbf{if }} norm \neq 0 \textsf{\textbf{ then}} & \\
-& \textsf{\textbf{9}} \quad \quad x_{norm} \leftarrow \frac{x_{pad}}{norm} & \\
-& \textsf{\textbf{10}} \quad \textsf{\textbf{end if}} & \\
-& \textsf{\textbf{11}} \quad |\psi\rangle \leftarrow \textsf{\textbf{AmplitudeEncoding}}(x_{norm}) \hspace{1.8cm} \textsf{// Map to quantum state} & \\
-& \textsf{\textbf{12}} \quad X_{QFT} \leftarrow \textsf{\textbf{ApplyQFT}}(|\psi\rangle) \hspace{3.4cm} \textsf{// Execute QFT circuit} & \\
-& \textsf{\textbf{13}} \quad \textsf{\textbf{return }} X_{QFT} &
-\end{flalign*}
-$$
-
-<hr>
-<hr>
 
 
 
