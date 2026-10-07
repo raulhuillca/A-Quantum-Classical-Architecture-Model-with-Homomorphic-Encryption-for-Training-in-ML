@@ -638,7 +638,16 @@ $$
 
 <hr>
 
+### 📊 Comparativa de Rendimiento y Parámetros del Modelo
 
+| Métrica / Parámetro | Símbolo Matemático | Modelo Clásico (Texto Plano) | Modelo Híbrido (CKKS + QFT) |
+| :--- | :---: | :---: | :---: |
+| **Precisión de Predicción (MSE)** | $MSE$ | $0.0152$ | $0.0158$ |
+| **Grado del Polinomio (CKKS)** | $N$ | N/A | $8192$ |
+| **Niveles de Multiplicación** | $L$ | N/A | $3$ |
+| **Factor de Escala** | $\Delta$ | N/A | $2^{40}$ |
+| **Tiempo por Época de Entrenamiento** | $t$ | $1.2 \text{ s}$ | $45.6 \text{ s}$ |
+| **Complejidad del Circuito** | $\mathcal{O}$ | $\mathcal{O}(n)$ | $\mathcal{O}(n \log n)$ |
 
 
 
