@@ -262,7 +262,6 @@ def aplicar_qft_completa(data_vector):
     # seguido de la ejecución del circuito QFT
 ```
 #### 🔒 Algoritmo
-#### 1.1. El Algoritmo (Quantum Fourier Transform)
 
 **Algoritmo: Quantum Fourier Transform via Amplitude Encoding with GPU Batch Processing**
 <hr>
