@@ -175,6 +175,7 @@ $$QFT\vert{}x\rangle = \frac{1}{\sqrt{N}} \sum_{j=0}^{N-1} \left( \sum_{k=0}^{N-
 
 Las amplitudes resultantes contienen información sobre la representación en el dominio de la frecuencia de la entrada.
 
+
 #### 3. Encriptación Homomórfica
 
 La arquitectura utiliza CKKS (Cheon-Kim-Kim-Song) para aritmética aproximada sobre datos numéricos encriptados. CKKS se basa en construcciones criptográficas basadas en retículos (lattices) relacionadas con el problema de Aprendizaje con Errores en Anillos (RLWE).
@@ -260,6 +261,54 @@ def aplicar_qft_completa(data_vector):
     # Preparación del estado cuántico
     # seguido de la ejecución del circuito QFT
 ```
+#### 🔒 Algoritmo
+#### 1.1. El Algoritmo (Quantum Fourier Transform)
+
+**Algoritmo: Quantum Fourier Transform via Amplitude Encoding with GPU Batch Processing**
+<hr>
+
+$$
+\begin{array}{rl}
+& \text{Input: Batch of classical feature vectors } X = \{V_1, \dots, V_B\} \text{ of length } L \\
+& \text{Output: Batch of QFT-transformed vectors } X_{QFT} = \{F_1, \dots, F_B\} \\
+1 & \mathcal{S} \leftarrow \text{AerSimulator}(\text{method}=\text{'statevector'}, \text{device}=\text{'GPU'}) \\
+2 & Circuits \leftarrow [\,] \\
+3 & Norms \leftarrow [\,] \\
+4 & n_q \leftarrow \lceil \log_2(L) \rceil \hspace{6cm} \text{// Calculate required number of qubits} \\
+5 & T \leftarrow 2^{n_q} \hspace{7.3cm} \text{// Target length (power of 2)} \\
+6 & \textbf{for } i = 1 \textbf{ to } B \textbf{ do} \\
+7 & \quad V_{pad} \leftarrow \text{Pad}(V_i, \text{length}=T, \text{value}=0) \\
+8 & \quad norm_i \leftarrow \Vert V_{pad} \Vert_2 \\
+9 & \quad \text{Append } norm_i \text{ to } Norms \\
+10 & \quad \textbf{if } norm_i = 0 \textbf{ then} \\
+11 & \quad \quad \text{Append Null to } Circuits \\
+12 & \quad \quad \textbf{continue} \\
+13 & \quad qc \leftarrow \text{QuantumCircuit}(n_q) \\
+14 & \quad qc.\text{initialize}(V_{pad} / norm_i) \hspace{4cm} \text{// Amplitude Encoding} \\
+15 & \quad \textbf{for } j = 0 \textbf{ to } n_q - 1 \textbf{ do} \\
+16 & \quad \quad \textbf{for } k = 0 \textbf{ to } j - 1 \textbf{ do} \\
+17 & \quad \quad \quad qc.\text{cp}(\pi / 2^{j-k}, k, j) \hspace{3cm} \text{// Controlled-Phase gate} \\
+18 & \quad \quad qc.\text{h}(j) \hspace{5.2cm} \text{// Hadamard gate} \\
+19 & \quad qc.\text{save\\_statevector}() \\
+20 & \quad \text{Append } qc \text{ to } Circuits \\
+21 & Circuits_{transpiled} \leftarrow \text{transpile}(Circuits, \mathcal{S}, \text{optimization\\_level}=0) \\
+22 & \mathcal{R} \leftarrow \mathcal{S}.\text{run}(Circuits_{transpiled}).\text{result}() \\
+23 & X_{QFT} \leftarrow [\,] \\
+24 & idx \leftarrow 0 \\
+25 & \textbf{for } i = 1 \textbf{ to } B \textbf{ do} \\
+26 & \quad \textbf{if } Norms[i] = 0 \textbf{ then} \\
+27 & \quad \quad F_i \leftarrow \{0\}^L \hspace{5.5cm} \text{// Handle zero-vectors} \\
+28 & \quad \textbf{else} \\
+29 & \quad \quad sv \leftarrow \mathcal{R}.\text{get\\_statevector}(idx) \\
+30 & \quad \quad sv_{scaled} \leftarrow sv \cdot Norms[i] \hspace{3.7cm} \text{// Rescale by original norm} \\
+31 & \quad \quad F_i \leftarrow \text{Real}(sv_{scaled})[0 \dots L-1] \hspace{2cm} \text{// Extract real part and truncate} \\
+32 & \quad \quad idx \leftarrow idx + 1 \\
+33 & \quad \text{Append } F_i \text{ to } X_{QFT} \\
+34 & \textbf{return } X_{QFT}
+\end{array}
+$$
+
+<hr>
 
 ### 🔐 Canal de Encriptación Homomórfica
 
