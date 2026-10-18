@@ -308,6 +308,7 @@ La configuración experimental de CKKS es:
 La arquitectura soporta varios modelos de aprendizaje automático adaptados a las características numéricas del cálculo encriptado.
 
 #### 1. Regresión Lineal
+![Status](https://img.shields.io/badge/Core-Regresión_Lineal-blue?style=flat-square)
 
 El modelo de regresión lineal se define como:
 
