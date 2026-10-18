@@ -363,6 +363,11 @@ $$\sigma(z)\approx 0.5+0.25z-\frac{1}{48}z^3$$
 
 Esta aproximación reduce la complejidad computacional asociada con las operaciones no lineales.
 
+##### 2.1. El Algoritmo
+##### 2.2. Código Fuente
+##### 2.3. Resultados: Tablas
+##### 2.4. Resultados: Figuras
+
 #### 3. LS-SVM
 
 La Máquina de Vectores de Soporte de Mínimos Cuadrados (LS-SVM) se formula utilizando un objetivo de optimización regularizado. La implementación utiliza una formulación lineal primal con:
@@ -373,7 +378,18 @@ La Máquina de Vectores de Soporte de Mínimos Cuadrados (LS-SVM) se formula uti
 
 El modelo se evalúa utilizando la precisión de clasificación.
 
+##### 3.1. El Algoritmo
+##### 3.2. Código Fuente
+##### 3.3. Resultados: Tablas
+##### 3.4. Resultados: Figuras
+
+
 #### 4. Perceptrón Multicapa (MLP)
+
+##### 4.1. El Algoritmo
+##### 4.2. Código Fuente
+##### 4.3. Resultados: Tablas
+##### 4.4. Resultados: Figuras
 
 La arquitectura experimental del MLP es:
 
@@ -389,7 +405,6 @@ La arquitectura experimental del MLP es:
       ▼
    1 salida
 ```
-
 ### 🧪 Configuración Experimental
 
 La comparación experimental evalúa dos configuraciones principales:
