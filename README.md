@@ -224,6 +224,37 @@ Los experimentos consideran:
 - 1,000,000 registros
 
 #### 1. Generación de Datos Sintéticos
+##### Algoritmo
+#### 1.1. El Algoritmo (TVAE Synthetic Data Generation)
+
+**Algoritmo: Massive Synthetic Data Generation via TVAE and Batch Processing for CKKS Homomorphic Encryption**
+<hr>
+
+$$
+\begin{array}{rl}
+& \text{Input: Real tabular dataset } D_{\text{real}}\text{, Total target synthetic rows } N\text{, Batch size } B\text{,} \\
+& \quad \text{Training epochs } E\text{, Output filename } F_{\text{out}} \\
+& \text{Output: Exported CSV dataset } F_{\text{out}} \text{ optimized for CKKSEncoder} \\
+1 & M \leftarrow \text{SingleTableMetadata}() \\
+2 & M.\text{detect\\_from\\_dataframe}(D_{\text{real}}) \\
+3 & \mathcal{M} \leftarrow \text{TVAESynthesizer}(M, \text{enforce\\_min\\_max\\_values}=\text{True}, \text{epochs}=E) \\
+4 & \mathcal{M}.\text{fit}(D_{\text{real}}) \hspace{4.8cm} \text{// Train TVAE on latent feature distributions} \\
+5 & Chunks \leftarrow [\,] \\
+6 & N_{\text{generated}} \leftarrow 0 \\
+7 & \textbf{while } N_{\text{generated}} < N \textbf{ do} \\
+8 & \quad b_{\text{current}} \leftarrow \min(B, N - N_{\text{generated}}) \hspace{1.6cm} \text{// Dynamic batch boundary calculation} \\
+9 & \quad C_k \leftarrow \mathcal{M}.\text{sample}(\text{num\\_rows}=b_{\text{current}}) \hspace{0.9cm} \text{// Sample vectors from TVAE latent space} \\
+10 & \quad \text{Append } C_k \text{ to } Chunks \\
+11 & \quad N_{\text{generated}} \leftarrow N_{\text{generated}} + b_{\text{current}} \\
+12 & D_{\text{synth}} \leftarrow \text{Concat}(Chunks, \text{ignore\\_index}=\text{True}) \\
+13 & \textbf{if } \text{HasNullValues}(D_{\text{synth}}) \textbf{ then} \\
+14 & \quad D_{\text{synth}} \leftarrow \text{ImputeWithColumnMean}(D_{\text{synth}}) \hspace{0.5cm} \text{// Prevent CKKS encoding faults} \\
+15 & \text{ExportToCSV}(D_{\text{synth}}, \text{path}=F_{\text{out}}, \text{float\\_format}=\text{'\%.10f'}) \hspace{0.2cm} \text{// Maintain 10-decimal float accuracy} \\
+16 & \textbf{return } F_{\text{out}}
+\end{array}
+$$
+
+<hr>
 
 La primera etapa genera los conjuntos de datos experimentales. Ejemplo:
 
