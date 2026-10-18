@@ -319,80 +319,40 @@ $$MSE=\frac{1}{n}\sum_{i=1}^{n}(y_i-\hat{y}_i)^2$$
 
 La implementación experimental utiliza optimización basada en gradiente sobre la representación transformada por QFT.
 ##### 1.1. El Algoritmo
-adapta el siguiente algoritmo : 
-%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%  
-\begin{algorithm}[htbp]
-\caption{Hybrid Homomorphic Multiple Linear Regression Training (CKKS)}
-\label{alg:hybrid_homomorphic_mlr_training}
-\DontPrintSemicolon
+#### 1.1. El Algoritmo
 
-\KwIn{Encrypted QFT-transformed feature chunks $\llbracket X \rrbracket = \{\llbracket X \rrbracket_1, \ldots, \llbracket X \rrbracket_C\}$, Plaintext feature matrix $X_{claro}$, Target vector $Y=\{y_1,\ldots,y_n\}$, learning rate $\alpha$, number of epochs $EPOCHS$, total chunks $C$}
-\KwOut{Encrypted model coefficients per chunk $\llbracket \beta_0 \rrbracket_c, \ldots, \llbracket \beta_m \rrbracket_c$}
-
-\tcp{1. Initialize encrypted weights per chunk}
-\For{$k=0$ \KwTo $m$}{
-    \For{$c=1$ \KwTo $C$}{
-        $\llbracket \beta_k \rrbracket_c \leftarrow \llbracket 0.01 \rrbracket$\;
-    }
-}
-
-\For{$epoch=1$ \KwTo $EPOCHS$}{
-    $\hat{Y} \leftarrow [\,]$ \tcp*{Initialize empty array for decrypted predictions}
-    
-    \tcp{2. Encrypted Prediction and Partial Decryption (Hybrid Step)}
-    \For{$c=1$ \KwTo $C$}{
-        $\llbracket \hat{Y} \rrbracket_c \leftarrow 
-        \llbracket \beta_0 \rrbracket_c \cdot \llbracket X_0 \rrbracket_c + 
-        \sum_{k=1}^{m} \llbracket \beta_k \rrbracket_c \cdot \llbracket X_k \rrbracket_c$\;
-        
-        $\hat{Y}_c \leftarrow \text{Decrypt}(\llbracket \hat{Y} \rrbracket_c)$\;
-        $\text{Append } \hat{Y}_c \text{ to } \hat{Y}$\;
-    }
-    
-    \tcp{3. Plaintext Error Calculation}
-    \For{$j=1$ \KwTo $n$}{
-        $e_j \leftarrow \hat{Y}_j - y_j$\;
-    }
-
-    \tcp{4. Plaintext Gradient Calculation and Encrypted Weight Update}
-    \For{$k=0$ \KwTo $m$}{
-        $grad_k \leftarrow \frac{1}{n} \sum_{j=1}^{n} e_j \cdot X_{claro, jk}$ \tcp*{$X_{claro, j0} = 1$}
-        
-        $\Delta_k \leftarrow \alpha \cdot grad_k$\;
-        
-        \For{$c=1$ \KwTo $C$}{
-            $\llbracket \beta_k \rrbracket_c \leftarrow \llbracket \beta_k \rrbracket_c - \Delta_k$\;
-        }
-    }
-}
-
-\Return{$\llbracket \beta_0 \rrbracket_c, \llbracket \beta_1 \rrbracket_c, \ldots, \llbracket \beta_m \rrbracket_c \quad \forall c \in \{1,\dots,C\}$}
-\end{algorithm}
-al siguiente formato : <hr>
-
-**Algoritmo :** Homomorphic Multiple Linear Regression Training
-
+**Algoritmo: Hybrid Homomorphic Multiple Linear Regression Training (CKKS)**
 <hr>
 
-$$
-\begin{flalign*}
-& \textsf{\textbf{Input:}} \textsf{ Encrypted QFT-transformed feature matrix } X = \{x_1, \dots, x_n\}\textsf{, target vector} & \\
-& \quad Y = \{y_1, \dots, y_n\}\textsf{, learning rate } \alpha\textsf{, number of iterations } num_{iter} & \\
-& \textsf{\textbf{Output:}} \textsf{ Encrypted model coefficients } \beta_0, \beta_1, \dots, \beta_m & \\
-& \textsf{\textbf{1}} \quad \textsf{\textbf{Initialize }} \beta_0, \beta_1, \dots, \beta_m \leftarrow 0.01 & \\
-& \textsf{\textbf{2}} \quad \textsf{\textbf{for }} i = 1 \textsf{\textbf{ to }} num_{iter} \textsf{\textbf{ do}} & \\
-& \textsf{\textbf{3}} \quad \quad \textsf{\textbf{for }} j = 1 \textsf{\textbf{ to }} n \textsf{\textbf{ do}} & \\
-& \textsf{\textbf{4}} \quad \quad \quad \hat{y}_j \leftarrow \beta_0 + \sum_{k=1}^{m} \beta_k \cdot x_{jk} & \\
-& \textsf{\textbf{5}} \quad \quad \quad e_j \leftarrow \hat{y}_j - y_j & \\
-& \textsf{\textbf{6}} \quad \quad \textsf{\textbf{for }} k = 0 \textsf{\textbf{ to }} m \textsf{\textbf{ do}} & \\
-& \textsf{\textbf{7}} \quad \quad \quad grad_k \leftarrow \frac{1}{n} \sum_{j=1}^{n} e_j \cdot x_{jk} \hspace{4cm} \textsf{// } x_{j0} = 1 & \\
-& \textsf{\textbf{8}} \quad \quad \quad \beta_k \leftarrow \beta_k - \alpha \cdot grad_k & \\
-& \textsf{\textbf{9}} \quad \textsf{\textbf{return }} \beta_0, \beta_1, \dots, \beta_m &
-\end{flalign*}
-$$
+**Input:** Encrypted QFT-transformed feature chunks $[\![ X ]\!] = \{[\![ X ]\!]_1, \ldots, [\![ X ]\!]_C\}$, Plaintext feature matrix $X_{claro}$, Target vector $Y=\{y_1,\ldots,y_n\}$, learning rate $\alpha$, number of epochs $EPOCHS$, total chunks $C$
 
+**Output:** Encrypted model coefficients per chunk $[\![ \beta_0 ]\!]_c, \ldots, [\![ \beta_m ]\!]_c$
 <hr>
+
+**1.** &nbsp;*// 1. Initialize encrypted weights per chunk*
+**2.** &nbsp;**for** $k=0$ **to** $m$ **do**
+**3.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**for** $c=1$ **to** $C$ **do**
+**4.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$[\![ \beta_k ]\!]_c \leftarrow [\![ 0.01 ]\!]$
+**5.** &nbsp;**for** $epoch=1$ **to** $EPOCHS$ **do**
+**6.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$\hat{Y} \leftarrow [\,]$ &nbsp;&nbsp;&nbsp; *// Initialize empty array for decrypted predictions*
+**7.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*// 2. Encrypted Prediction and Partial Decryption (Hybrid Step)*
+**8.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**for** $c=1$ **to** $C$ **do**
+**9.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$[\![ \hat{Y} ]\!]_c \leftarrow [\![ \beta_0 ]\!]_c \cdot [\![ X_0 ]\!]_c + \sum_{k=1}^{m} [\![ \beta_k ]\!]_c \cdot [\![ X_k ]\!]_c$
+**10.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$\hat{Y}_c \leftarrow \text{Decrypt}([\![ \hat{Y} ]\!]_c)$
+**11.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**Append** $\hat{Y}_c$ **to** $\hat{Y}$
+**12.** &nbsp;&nbsp;&nbsp;&nbsp;*// 3. Plaintext Error Calculation*
+**13.** &nbsp;&nbsp;&nbsp;&nbsp;**for** $j=1$ **to** $n$ **do**
+**14.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$e_j \leftarrow \hat{Y}_j - y_j$
+**15.** &nbsp;&nbsp;&nbsp;&nbsp;*// 4. Plaintext Gradient Calculation and Encrypted Weight Update*
+**16.** &nbsp;&nbsp;&nbsp;&nbsp;**for** $k=0$ **to** $m$ **do**
+**17.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$grad_k \leftarrow \frac{1}{n} \sum_{j=1}^{n} e_j \cdot X_{claro, jk}$ &nbsp;&nbsp;&nbsp; *(where $X_{claro, j0} = 1$)*
+**18.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$\Delta_k \leftarrow \alpha \cdot grad_k$
+**19.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**for** $c=1$ **to** $C$ **do**
+**20.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$[\![ \beta_k ]\!]_c \leftarrow [\![ \beta_k ]\!]_c - \Delta_k$
+**21.** **return** $[\![ \beta_0 ]\!]_c, [\![ \beta_1 ]\!]_c, \ldots, [\![ \beta_m ]\!]_c \quad \forall c \in \{1,\dots,C\}$
+<hr>
+
+
 ##### 1.2. Código Fuente
 <hr>
 
