@@ -351,10 +351,7 @@ $$
 
 ##### 1.2. Código Fuente
 ##### 1.3. Resultados: Tablas
-Tablas con los valores numéricos obtenidos (ej. coeficientes, métricas de error, tiempos de ejecución).
-
 ##### 1.4. Resultados: Figuras
-Gráficos y visualizaciones de la simulación (ej. línea de ajuste sobre los puntos de datos, gráficos de residuos).
 
 #### 2. Regresión Logística
 
@@ -417,6 +414,40 @@ La Máquina de Vectores de Soporte de Mínimos Cuadrados (LS-SVM) se formula uti
 El modelo se evalúa utilizando la precisión de clasificación.
 
 ##### 3.1. El Algoritmo
+
+**Algoritmo: Hybrid Homomorphic Least Squares Support Vector Machine (LS-SVM) Training**
+<hr>
+
+$$
+\begin{array}{rl}
+& \text{Input: Encrypted QFT-transformed feature chunks } ⟦ X ⟧ = \{⟦ X ⟧_1, \dots, ⟦ X ⟧_C\}\text{, Plaintext feature} \\
+& \quad \text{matrix } X_{claro}\text{, Target labels } Y=\{y_1,\dots,y_n\} \in \{-1,1\}^n\text{, learning rate } \alpha\text{, epochs } EPOCHS\text{,} \\
+& \quad \text{regularization parameter } \gamma\text{, total chunks } C \\
+& \text{Output: Encrypted LS-SVM model coefficients per chunk } ⟦ \beta_0 ⟧_c, \dots, ⟦ \beta_m ⟧_c \\
+1 & \textbf{for } k = 0 \textbf{ to } m \textbf{ do} \\
+2 & \quad \beta_{claro, k} \leftarrow 0.01 \hspace{5.5cm} \text{// Plaintext tracker for } L_2 \text{ regularization} \\
+3 & \quad \textbf{for } c = 1 \textbf{ to } C \textbf{ do} \\
+4 & \quad \quad ⟦ \beta_k ⟧_c \leftarrow ⟦ 0.01 ⟧ \\
+5 & \textbf{for } epoch = 1 \textbf{ to } EPOCHS \textbf{ do} \\
+6 & \quad S \leftarrow [\,] \\
+7 & \quad \textbf{for } c = 1 \textbf{ to } C \textbf{ do} \\
+8 & \quad \quad ⟦ S ⟧_c \leftarrow ⟦ \beta_0 ⟧_c \cdot ⟦ X_0 ⟧_c + \sum_{k=1}^{m} ⟦ \beta_k ⟧_c \cdot ⟦ X_k ⟧_c \\
+9 & \quad \quad S_c \leftarrow \text{Decrypt}(⟦ S ⟧_c) \\
+10 & \quad \quad \text{Append } S_c \text{ to } S \\
+11 & \quad \textbf{for } k = 0 \textbf{ to } m \textbf{ do} \\
+12 & \quad \quad \textbf{if } k = 0 \textbf{ then} \\
+13 & \quad \quad \quad grad_0 \leftarrow \frac{\gamma}{n} \sum_{j=1}^{n} (S_j - y_j) \cdot X_{claro, j0} \hspace{1.8cm} \text{// Bias is unregularized} \\
+14 & \quad \quad \textbf{else} \\
+15 & \quad \quad \quad grad_k \leftarrow \frac{\gamma}{n} \sum_{j=1}^{n} (S_j - y_j) \cdot X_{claro, jk} + \frac{1}{n}\beta_{claro, k} \hspace{0.3cm} \text{// Apply } L_2 \text{ penalty} \\
+16 & \quad \quad \Delta_k \leftarrow \alpha \cdot grad_k \\
+17 & \quad \quad \textbf{for } c = 1 \textbf{ to } C \textbf{ do} \\
+18 & \quad \quad \quad ⟦ \beta_k ⟧_c \leftarrow ⟦ \beta_k ⟧_c - \Delta_k \\
+19 & \quad \quad \beta_{claro, k} \leftarrow \beta_{claro, k} - \Delta_k \hspace{3.4cm} \text{// Tracker Sync} \\
+20 & \textbf{return } ⟦ \beta_0 ⟧_c, ⟦ \beta_1 ⟧_c, \dots, ⟦ \beta_m ⟧_c \quad \forall c \in \{1,\dots,C\}
+\end{array}
+$$
+
+<hr>
 ##### 3.2. Código Fuente
 ##### 3.3. Resultados: Tablas
 ##### 3.4. Resultados: Figuras
