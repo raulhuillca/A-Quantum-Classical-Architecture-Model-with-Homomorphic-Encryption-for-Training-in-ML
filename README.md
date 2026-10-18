@@ -456,7 +456,6 @@ $$
 #### 4. Perceptrón Multicapa (MLP)
 
 ##### 4.1. El Algoritmo
-#### 1.1. El Algoritmo (Shallow MLP)
 
 **Algoritmo: Hybrid Homomorphic Shallow MLP Training (CKKS with Quadratic Activation)**
 <hr>
