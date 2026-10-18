@@ -478,24 +478,25 @@ $$
 10 & \quad \quad \quad A_{i, h} \leftarrow (Z_{claro, i, h})^2 \hspace{5.5cm} \text{// Quadratic activation } f(z) = z^2 \\
 11 & \quad \quad \hat{y}_i \leftarrow b_{claro} + \sum_{h=1}^H A_{i, h} \cdot V_{claro, h} \\
 12 & \quad \quad e_i \leftarrow \hat{y}_i - y_i \\
-13 & \quad \quad d\_salida_i \leftarrow \frac{2}{n} e_i \\
-14 & \quad grad\_b \leftarrow \sum_{i=1}^n d\_salida_i \\
+13 & \quad \quad d_{salida, i} \leftarrow \frac{2}{n} e_i \\
+14 & \quad grad_b \leftarrow \sum_{i=1}^n d_{salida, i} \\
 15 & \quad \textbf{for } h = 1 \textbf{ to } H \textbf{ do} \\
-16 & \quad \quad grad\_V_h \leftarrow \sum_{i=1}^n A_{i, h} \cdot d\_salida_i \\
+16 & \quad \quad grad_{V_h} \leftarrow \sum_{i=1}^n A_{i, h} \cdot d_{salida, i} \\
 17 & \quad \quad \textbf{for } j = 0 \textbf{ to } m \textbf{ do} \\
-18 & \quad \quad \quad grad\_W_{h,j} \leftarrow \frac{1}{n} \sum_{i=1}^n (d\_salida_i \cdot V_{claro, h}) \cdot (2 Z_{claro, i, h}) \cdot X_{claro, ij} \hspace{0.5cm} \text{// Derivative of } z^2 \text{ is } 2z \\
+18 & \quad \quad \quad grad_{W_{h,j}} \leftarrow \frac{1}{n} \sum_{i=1}^n (d_{salida, i} \cdot V_{claro, h}) \cdot (2 Z_{claro, i, h}) \cdot X_{claro, ij} \hspace{0.5cm} \text{// Derivative of } z^2 \text{ is } 2z \\
 19 & \quad \textbf{for } c = 1 \textbf{ to } C \textbf{ do} \\
-20 & \quad \quad ⟦ b_{out} ⟧_c \leftarrow ⟦ b_{out} ⟧_c - \alpha \cdot grad\_b \\
+20 & \quad \quad ⟦ b_{out} ⟧_c \leftarrow ⟦ b_{out} ⟧_c - \alpha \cdot grad_b \\
 21 & \quad \quad \textbf{for } h = 1 \textbf{ to } H \textbf{ do} \\
-22 & \quad \quad \quad ⟦ V_h ⟧_c \leftarrow ⟦ V_h ⟧_c - \alpha \cdot grad\_V_h \\
+22 & \quad \quad \quad ⟦ V_h ⟧_c \leftarrow ⟦ V_h ⟧_c - \alpha \cdot grad_{V_h} \\
 23 & \quad \quad \quad \textbf{for } j = 0 \textbf{ to } m \textbf{ do} \\
-24 & \quad \quad \quad \quad ⟦ W_{h,j} ⟧_c \leftarrow ⟦ W_{h,j} ⟧_c - \alpha \cdot grad\_W_{h,j} \\
+24 & \quad \quad \quad \quad ⟦ W_{h,j} ⟧_c \leftarrow ⟦ W_{h,j} ⟧_c - \alpha \cdot grad_{W_{h,j}} \\
 25 & \quad \text{Update } W_{claro}, V_{claro}, b_{claro} \text{ using gradients and } \alpha \\
 26 & \textbf{return } ⟦ W ⟧, ⟦ V ⟧, ⟦ b_{out} ⟧
 \end{array}
 $$
 
 <hr>
+
 ##### 4.2. Código Fuente
 ##### 4.3. Resultados: Tablas
 ##### 4.4. Resultados: Figuras
