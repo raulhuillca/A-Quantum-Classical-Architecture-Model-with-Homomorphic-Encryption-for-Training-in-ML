@@ -456,6 +456,46 @@ $$
 #### 4. Perceptrón Multicapa (MLP)
 
 ##### 4.1. El Algoritmo
+#### 1.1. El Algoritmo (Shallow MLP)
+
+**Algoritmo: Hybrid Homomorphic Shallow MLP Training (CKKS with Quadratic Activation)**
+<hr>
+
+$$
+\begin{array}{rl}
+& \text{Input: Encrypted QFT feature chunks } ⟦ X ⟧ = \{⟦ X ⟧_1, \dots, ⟦ X ⟧_C\}\text{, Plaintext matrix } X_{claro}\text{,} \\
+& \quad \text{Target } Y=\{y_1,\dots,y_n\}\text{, learning rate } \alpha\text{, epochs } EPOCHS\text{, hidden neurons } H \\
+& \text{Output: Encrypted MLP weights } ⟦ W ⟧ \text{ (hidden), } ⟦ V ⟧ \text{ (output), } ⟦ b_{out} ⟧ \text{ (bias)} \\
+1 & \text{Initialize } ⟦ W_{h,j} ⟧_c, ⟦ V_h ⟧_c, ⟦ b_{out} ⟧_c \leftarrow ⟦ 0.01 ⟧ \quad \forall h, j, c \hspace{2cm} \text{// Encrypted weights} \\
+2 & \text{Initialize plaintext trackers } W_{claro}, V_{claro}, b_{claro} \leftarrow 0.01 \\
+3 & \textbf{for } epoch = 1 \textbf{ to } EPOCHS \textbf{ do} \\
+4 & \quad \textbf{for } h = 1 \textbf{ to } H \textbf{ do} \\
+5 & \quad \quad \textbf{for } c = 1 \textbf{ to } C \textbf{ do} \\
+6 & \quad \quad \quad ⟦ Z_h ⟧_c \leftarrow ⟦ W_{h,0} ⟧_c \cdot ⟦ X_0 ⟧_c + \sum_{j=1}^{m} ⟦ W_{h,j} ⟧_c \cdot ⟦ X_j ⟧_c \\
+7 & \quad \quad \quad Z_{claro, h, c} \leftarrow \text{Decrypt}(⟦ Z_h ⟧_c) \\
+8 & \quad \textbf{for } i = 1 \textbf{ to } n \textbf{ do} \\
+9 & \quad \quad \textbf{for } h = 1 \textbf{ to } H \textbf{ do} \\
+10 & \quad \quad \quad A_{i, h} \leftarrow (Z_{claro, i, h})^2 \hspace{5.5cm} \text{// Quadratic activation } f(z) = z^2 \\
+11 & \quad \quad \hat{y}_i \leftarrow b_{claro} + \sum_{h=1}^H A_{i, h} \cdot V_{claro, h} \\
+12 & \quad \quad e_i \leftarrow \hat{y}_i - y_i \\
+13 & \quad \quad d\_salida_i \leftarrow \frac{2}{n} e_i \\
+14 & \quad grad\_b \leftarrow \sum_{i=1}^n d\_salida_i \\
+15 & \quad \textbf{for } h = 1 \textbf{ to } H \textbf{ do} \\
+16 & \quad \quad grad\_V_h \leftarrow \sum_{i=1}^n A_{i, h} \cdot d\_salida_i \\
+17 & \quad \quad \textbf{for } j = 0 \textbf{ to } m \textbf{ do} \\
+18 & \quad \quad \quad grad\_W_{h,j} \leftarrow \frac{1}{n} \sum_{i=1}^n (d\_salida_i \cdot V_{claro, h}) \cdot (2 Z_{claro, i, h}) \cdot X_{claro, ij} \hspace{0.5cm} \text{// Derivative of } z^2 \text{ is } 2z \\
+19 & \quad \textbf{for } c = 1 \textbf{ to } C \textbf{ do} \\
+20 & \quad \quad ⟦ b_{out} ⟧_c \leftarrow ⟦ b_{out} ⟧_c - \alpha \cdot grad\_b \\
+21 & \quad \quad \textbf{for } h = 1 \textbf{ to } H \textbf{ do} \\
+22 & \quad \quad \quad ⟦ V_h ⟧_c \leftarrow ⟦ V_h ⟧_c - \alpha \cdot grad\_V_h \\
+23 & \quad \quad \quad \textbf{for } j = 0 \textbf{ to } m \textbf{ do} \\
+24 & \quad \quad \quad \quad ⟦ W_{h,j} ⟧_c \leftarrow ⟦ W_{h,j} ⟧_c - \alpha \cdot grad\_W_{h,j} \\
+25 & \quad \text{Update } W_{claro}, V_{claro}, b_{claro} \text{ using gradients and } \alpha \\
+26 & \textbf{return } ⟦ W ⟧, ⟦ V ⟧, ⟦ b_{out} ⟧
+\end{array}
+$$
+
+<hr>
 ##### 4.2. Código Fuente
 ##### 4.3. Resultados: Tablas
 ##### 4.4. Resultados: Figuras
