@@ -308,7 +308,6 @@ La configuración experimental de CKKS es:
 La arquitectura soporta varios modelos de aprendizaje automático adaptados a las características numéricas del cálculo encriptado.
 
 #### 1. Regresión Lineal
-![Status](https://img.shields.io/badge/Core-Regresión_Lineal-blue?style=flat-square)
 
 El modelo de regresión lineal se define como:
 
@@ -321,7 +320,30 @@ $$MSE=\frac{1}{n}\sum_{i=1}^{n}(y_i-\hat{y}_i)^2$$
 La implementación experimental utiliza optimización basada en gradiente sobre la representación transformada por QFT.
 
 ##### 1.2. Código Fuente
-Implementación principal de la simulación.
+<hr>
+
+**Algoritmo :** Homomorphic Multiple Linear Regression Training
+
+<hr>
+
+$$
+\begin{flalign*}
+& \textsf{\textbf{Input:}} \textsf{ Encrypted QFT-transformed feature matrix } X = \{x_1, \dots, x_n\}\textsf{, target vector} & \\
+& \quad Y = \{y_1, \dots, y_n\}\textsf{, learning rate } \alpha\textsf{, number of iterations } num_{iter} & \\
+& \textsf{\textbf{Output:}} \textsf{ Encrypted model coefficients } \beta_0, \beta_1, \dots, \beta_m & \\
+& \textsf{\textbf{1}} \quad \textsf{\textbf{Initialize }} \beta_0, \beta_1, \dots, \beta_m \leftarrow 0.01 & \\
+& \textsf{\textbf{2}} \quad \textsf{\textbf{for }} i = 1 \textsf{\textbf{ to }} num_{iter} \textsf{\textbf{ do}} & \\
+& \textsf{\textbf{3}} \quad \quad \textsf{\textbf{for }} j = 1 \textsf{\textbf{ to }} n \textsf{\textbf{ do}} & \\
+& \textsf{\textbf{4}} \quad \quad \quad \hat{y}_j \leftarrow \beta_0 + \sum_{k=1}^{m} \beta_k \cdot x_{jk} & \\
+& \textsf{\textbf{5}} \quad \quad \quad e_j \leftarrow \hat{y}_j - y_j & \\
+& \textsf{\textbf{6}} \quad \quad \textsf{\textbf{for }} k = 0 \textsf{\textbf{ to }} m \textsf{\textbf{ do}} & \\
+& \textsf{\textbf{7}} \quad \quad \quad grad_k \leftarrow \frac{1}{n} \sum_{j=1}^{n} e_j \cdot x_{jk} \hspace{4cm} \textsf{// } x_{j0} = 1 & \\
+& \textsf{\textbf{8}} \quad \quad \quad \beta_k \leftarrow \beta_k - \alpha \cdot grad_k & \\
+& \textsf{\textbf{9}} \quad \textsf{\textbf{return }} \beta_0, \beta_1, \dots, \beta_m &
+\end{flalign*}
+$$
+
+<hr>
 
 ##### 1.3. Resultados: Tablas
 Tablas con los valores numéricos obtenidos (ej. coeficientes, métricas de error, tiempos de ejecución).
