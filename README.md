@@ -319,6 +319,15 @@ $$MSE=\frac{1}{n}\sum_{i=1}^{n}(y_i-\hat{y}_i)^2$$
 
 La implementación experimental utiliza optimización basada en gradiente sobre la representación transformada por QFT.
 
+##### 1.2. Código Fuente
+Implementación principal de la simulación.
+
+##### 1.3. Resultados: Tablas
+Tablas con los valores numéricos obtenidos (ej. coeficientes, métricas de error, tiempos de ejecución).
+
+##### 1.4. Resultados: Figuras
+Gráficos y visualizaciones de la simulación (ej. línea de ajuste sobre los puntos de datos, gráficos de residuos).
+
 #### 2. Regresión Logística
 
 El modelo de regresión logística utiliza la función sigmoide:
