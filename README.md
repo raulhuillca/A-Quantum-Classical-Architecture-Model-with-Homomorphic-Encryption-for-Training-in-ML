@@ -224,8 +224,7 @@ Los experimentos consideran:
 - 1,000,000 registros
 
 #### 1. Generación de Datos Sintéticos
-##### Algoritmo
-#### 1.1. El Algoritmo (TVAE Synthetic Data Generation)
+##### El Algoritmo (TVAE Synthetic Data Generation)
 
 **Algoritmo: Massive Synthetic Data Generation via TVAE and Batch Processing for CKKS Homomorphic Encryption**
 <hr>
