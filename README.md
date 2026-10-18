@@ -319,23 +319,22 @@ $$MSE=\frac{1}{n}\sum_{i=1}^{n}(y_i-\hat{y}_i)^2$$
 
 La implementación experimental utiliza optimización basada en gradiente sobre la representación transformada por QFT.
 ##### 1.1. El Algoritmo
-
 **Algoritmo: Hybrid Homomorphic Multiple Linear Regression Training (CKKS)**
 <hr>
 
 $$
 \begin{array}{rl}
-& \text{Input: Encrypted QFT-transformed feature chunks } [\![ X ]\!] = \{[\![ X ]\!]_1, \dots, [\![ X ]\!]_C\}\text{, Plaintext feature} \\
+& \text{Input: Encrypted QFT-transformed feature chunks } ⟦ X ⟧ = \{⟦ X ⟧_1, \dots, ⟦ X ⟧_C\}\text{, Plaintext feature} \\
 & \quad \text{matrix } X_{claro}\text{, Target vector } Y=\{y_1,\dots,y_n\}\text{, learning rate } \alpha\text{, epochs } EPOCHS\text{, total chunks } C \\
-& \text{Output: Encrypted model coefficients per chunk } [\![ \beta_0 ]\!]_c, \dots, [\![ \beta_m ]\!]_c \\
+& \text{Output: Encrypted model coefficients per chunk } ⟦ \beta_0 ⟧_c, \dots, ⟦ \beta_m ⟧_c \\
 1 & \textbf{for } k = 0 \textbf{ to } m \textbf{ do} \\
 2 & \quad \textbf{for } c = 1 \textbf{ to } C \textbf{ do} \\
-3 & \quad \quad [\![ \beta_k ]\!]_c \leftarrow [\![ 0.01 ]\!] \\
+3 & \quad \quad ⟦ \beta_k ⟧_c \leftarrow ⟦ 0.01 ⟧ \\
 4 & \textbf{for } epoch = 1 \textbf{ to } EPOCHS \textbf{ do} \\
 5 & \quad \hat{Y} \leftarrow [\,] \\
 6 & \quad \textbf{for } c = 1 \textbf{ to } C \textbf{ do} \\
-7 & \quad \quad [\![ \hat{Y} ]\!]_c \leftarrow [\![ \beta_0 ]\!]_c \cdot [\![ X_0 ]\!]_c + \sum_{k=1}^{m} [\![ \beta_k ]\!]_c \cdot [\![ X_k ]\!]_c \\
-8 & \quad \quad \hat{Y}_c \leftarrow \text{Decrypt}([\![ \hat{Y} ]\!]_c) \\
+7 & \quad \quad ⟦ \hat{Y} ⟧_c \leftarrow ⟦ \beta_0 ⟧_c \cdot ⟦ X_0 ⟧_c + \sum_{k=1}^{m} ⟦ \beta_k ⟧_c \cdot ⟦ X_k ⟧_c \\
+8 & \quad \quad \hat{Y}_c \leftarrow \text{Decrypt}(⟦ \hat{Y} ⟧_c) \\
 9 & \quad \quad \text{Append } \hat{Y}_c \text{ to } \hat{Y} \\
 10 & \quad \textbf{for } j = 1 \textbf{ to } n \textbf{ do} \\
 11 & \quad \quad e_j \leftarrow \hat{Y}_j - y_j \\
@@ -343,13 +342,12 @@ $$
 13 & \quad \quad grad_k \leftarrow \frac{1}{n} \sum_{j=1}^{n} e_j \cdot X_{claro, jk} \hspace{3cm} \text{// } X_{claro, j0} = 1 \\
 14 & \quad \quad \Delta_k \leftarrow \alpha \cdot grad_k \\
 15 & \quad \quad \textbf{for } c = 1 \textbf{ to } C \textbf{ do} \\
-16 & \quad \quad \quad [\![ \beta_k ]\!]_c \leftarrow [\![ \beta_k ]\!]_c - \Delta_k \\
-17 & \textbf{return } [\![ \beta_0 ]\!]_c, [\![ \beta_1 ]\!]_c, \dots, [\![ \beta_m ]\!]_c \quad \forall c \in \{1,\dots,C\}
+16 & \quad \quad \quad ⟦ \beta_k ⟧_c \leftarrow ⟦ \beta_k ⟧_c - \Delta_k \\
+17 & \textbf{return } ⟦ \beta_0 ⟧_c, ⟦ \beta_1 ⟧_c, \dots, ⟦ \beta_m ⟧_c \quad \forall c \in \{1,\dots,C\}
 \end{array}
 $$
 
 <hr>
-
 
 ##### 1.2. Código Fuente
 ##### 1.3. Resultados: Tablas
