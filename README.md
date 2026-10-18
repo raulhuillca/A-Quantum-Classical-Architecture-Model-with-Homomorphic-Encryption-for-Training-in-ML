@@ -324,32 +324,31 @@ La implementación experimental utiliza optimización basada en gradiente sobre 
 **Algoritmo: Hybrid Homomorphic Multiple Linear Regression Training (CKKS)**
 <hr>
 
-**Input:** Encrypted QFT-transformed feature chunks $[\![ X ]\!] = \{[\![ X ]\!]_1, \ldots, [\![ X ]\!]_C\}$, Plaintext feature matrix $X_{claro}$, Target vector $Y=\{y_1,\ldots,y_n\}$, learning rate $\alpha$, number of epochs $EPOCHS$, total chunks $C$
+$$
+\begin{array}{rl}
+& \text{Input: Encrypted QFT-transformed feature chunks } [\![ X ]\!] = \{[\![ X ]\!]_1, \dots, [\![ X ]\!]_C\}\text{, Plaintext feature} \\
+& \quad \text{matrix } X_{claro}\text{, Target vector } Y=\{y_1,\dots,y_n\}\text{, learning rate } \alpha\text{, epochs } EPOCHS\text{, total chunks } C \\
+& \text{Output: Encrypted model coefficients per chunk } [\![ \beta_0 ]\!]_c, \dots, [\![ \beta_m ]\!]_c \\
+1 & \textbf{for } k = 0 \textbf{ to } m \textbf{ do} \\
+2 & \quad \textbf{for } c = 1 \textbf{ to } C \textbf{ do} \\
+3 & \quad \quad [\![ \beta_k ]\!]_c \leftarrow [\![ 0.01 ]\!] \\
+4 & \textbf{for } epoch = 1 \textbf{ to } EPOCHS \textbf{ do} \\
+5 & \quad \hat{Y} \leftarrow [\,] \\
+6 & \quad \textbf{for } c = 1 \textbf{ to } C \textbf{ do} \\
+7 & \quad \quad [\![ \hat{Y} ]\!]_c \leftarrow [\![ \beta_0 ]\!]_c \cdot [\![ X_0 ]\!]_c + \sum_{k=1}^{m} [\![ \beta_k ]\!]_c \cdot [\![ X_k ]\!]_c \\
+8 & \quad \quad \hat{Y}_c \leftarrow \text{Decrypt}([\![ \hat{Y} ]\!]_c) \\
+9 & \quad \quad \text{Append } \hat{Y}_c \text{ to } \hat{Y} \\
+10 & \quad \textbf{for } j = 1 \textbf{ to } n \textbf{ do} \\
+11 & \quad \quad e_j \leftarrow \hat{Y}_j - y_j \\
+12 & \quad \textbf{for } k = 0 \textbf{ to } m \textbf{ do} \\
+13 & \quad \quad grad_k \leftarrow \frac{1}{n} \sum_{j=1}^{n} e_j \cdot X_{claro, jk} \hspace{3cm} \text{// } X_{claro, j0} = 1 \\
+14 & \quad \quad \Delta_k \leftarrow \alpha \cdot grad_k \\
+15 & \quad \quad \textbf{for } c = 1 \textbf{ to } C \textbf{ do} \\
+16 & \quad \quad \quad [\![ \beta_k ]\!]_c \leftarrow [\![ \beta_k ]\!]_c - \Delta_k \\
+17 & \textbf{return } [\![ \beta_0 ]\!]_c, [\![ \beta_1 ]\!]_c, \dots, [\![ \beta_m ]\!]_c \quad \forall c \in \{1,\dots,C\}
+\end{array}
+$$
 
-**Output:** Encrypted model coefficients per chunk $[\![ \beta_0 ]\!]_c, \ldots, [\![ \beta_m ]\!]_c$
-<hr>
-
-**1.** &nbsp;*// 1. Initialize encrypted weights per chunk*
-**2.** &nbsp;**for** $k=0$ **to** $m$ **do**
-**3.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**for** $c=1$ **to** $C$ **do**
-**4.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$[\![ \beta_k ]\!]_c \leftarrow [\![ 0.01 ]\!]$
-**5.** &nbsp;**for** $epoch=1$ **to** $EPOCHS$ **do**
-**6.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$\hat{Y} \leftarrow [\,]$ &nbsp;&nbsp;&nbsp; *// Initialize empty array for decrypted predictions*
-**7.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*// 2. Encrypted Prediction and Partial Decryption (Hybrid Step)*
-**8.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**for** $c=1$ **to** $C$ **do**
-**9.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$[\![ \hat{Y} ]\!]_c \leftarrow [\![ \beta_0 ]\!]_c \cdot [\![ X_0 ]\!]_c + \sum_{k=1}^{m} [\![ \beta_k ]\!]_c \cdot [\![ X_k ]\!]_c$
-**10.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$\hat{Y}_c \leftarrow \text{Decrypt}([\![ \hat{Y} ]\!]_c)$
-**11.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**Append** $\hat{Y}_c$ **to** $\hat{Y}$
-**12.** &nbsp;&nbsp;&nbsp;&nbsp;*// 3. Plaintext Error Calculation*
-**13.** &nbsp;&nbsp;&nbsp;&nbsp;**for** $j=1$ **to** $n$ **do**
-**14.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$e_j \leftarrow \hat{Y}_j - y_j$
-**15.** &nbsp;&nbsp;&nbsp;&nbsp;*// 4. Plaintext Gradient Calculation and Encrypted Weight Update*
-**16.** &nbsp;&nbsp;&nbsp;&nbsp;**for** $k=0$ **to** $m$ **do**
-**17.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$grad_k \leftarrow \frac{1}{n} \sum_{j=1}^{n} e_j \cdot X_{claro, jk}$ &nbsp;&nbsp;&nbsp; *(where $X_{claro, j0} = 1$)*
-**18.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$\Delta_k \leftarrow \alpha \cdot grad_k$
-**19.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**for** $c=1$ **to** $C$ **do**
-**20.** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$[\![ \beta_k ]\!]_c \leftarrow [\![ \beta_k ]\!]_c - \Delta_k$
-**21.** **return** $[\![ \beta_0 ]\!]_c, [\![ \beta_1 ]\!]_c, \ldots, [\![ \beta_m ]\!]_c \quad \forall c \in \{1,\dots,C\}$
 <hr>
 
 
