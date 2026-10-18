@@ -303,8 +303,6 @@ La configuración experimental de CKKS es:
            Evaluación
 ```
 #### 🔒 Algoritmo
-#### 1.1. El Algoritmo (CKKS Chunking)
-
 **Algoritmo: CKKS Homomorphic Encryption with Automatic Chunking**
 <hr>
 
