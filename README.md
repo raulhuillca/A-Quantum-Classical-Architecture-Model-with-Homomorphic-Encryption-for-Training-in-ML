@@ -265,6 +265,20 @@ La primera etapa genera los conjuntos de datos experimentales. Ejemplo:
 
 Los datos generados son posteriormente normalizados antes del procesamiento cuántico.
 
+##### Codigo fuente
+<details>
+<summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
+
+```python
+# Importa tus librerías aquí (ej. TenSEAL, Qiskit, SDV)
+import tenseal as ts
+import numpy as np
+
+def entrenar_modelo_ckks():
+    print("Inicializando contexto de encriptación...")
+    # Pega todo tu código Python aquí
+    pass
+
 ### ⚛️ Transformada Cuántica de Fourier
 
 El módulo QFT recibe un vector de características y ajusta su dimensión a la potencia de dos más cercana.
