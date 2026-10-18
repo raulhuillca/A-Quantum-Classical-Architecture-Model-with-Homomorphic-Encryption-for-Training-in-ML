@@ -276,7 +276,7 @@ La configuración experimental de CKKS es:
 | Ranuras (slots) CKKS | 4096 |
 | Parámetro experimental BKZ | 450 |
 
-### 🔒 Flujo de Datos CKKS
+#### 🔒 Flujo de Datos CKKS
 
 ```plaintext
       Características QFT
@@ -302,6 +302,8 @@ La configuración experimental de CKKS es:
                ▼
            Evaluación
 ```
+#### 🔒 Algoritmo
+
 
 ### 🧠 Modelos de Aprendizaje Automático
 
