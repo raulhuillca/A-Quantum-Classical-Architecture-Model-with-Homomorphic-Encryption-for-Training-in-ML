@@ -403,17 +403,17 @@ Esta aproximación reduce la complejidad computacional asociada con las operacio
 
 $$
 \begin{array}{rl}
-& \text{Input: Encrypted QFT-transformed feature chunks } \llbracket X \rrbracket = \{\llbracket X \rrbracket_1, \dots, \llbracket X \rrbracket_C\}\text{, Plaintext feature} \\
+& \text{Input: Encrypted QFT-transformed feature chunks } [ \! [ X ] \! ] = \{[ \! [ X ] \! ]_1, \dots, [ \! [ X ] \! ]_C\}\text{, Plaintext feature} \\
 & \quad \text{matrix } X_{claro}\text{, Target classes } Y=\{y_1,\dots,y_n\} \in \{0,1\}^n\text{, learning rate } \alpha\text{, epochs } EPOCHS\text{, chunks } C \\
-& \text{Output: Encrypted logistic model coefficients per chunk } \llbracket \beta_0 \rrbracket_c, \dots, \llbracket \beta_m \rrbracket_c \\
+& \text{Output: Encrypted logistic model coefficients per chunk } [ \! [ \beta_0 ] \! ]_c, \dots, [ \! [ \beta_m ] \! ]_c \\
 1 & \textbf{for } k = 0 \textbf{ to } m \textbf{ do} \\
 2 & \quad \textbf{for } c = 1 \textbf{ to } C \textbf{ do} \\
-3 & \quad \quad \llbracket \beta_k \rrbracket_c \leftarrow \llbracket 0.01 \rrbracket \\
+3 & \quad \quad [ \! [ \beta_k ] \! ]_c \leftarrow [ \! [ 0.01 ] \! ] \\
 4 & \textbf{for } epoch = 1 \textbf{ to } EPOCHS \textbf{ do} \\
 5 & \quad P \leftarrow [\,] \\
 6 & \quad \textbf{for } c = 1 \textbf{ to } C \textbf{ do} \\
-7 & \quad \quad \llbracket Z \rrbracket_c \leftarrow \llbracket \beta_0 \rrbracket_c \cdot \llbracket X_0 \rrbracket_c + \sum_{k=1}^{m} \llbracket \beta_k \rrbracket_c \cdot \llbracket X_k \rrbracket_c \\
-8 & \quad \quad Z_c \leftarrow \text{Decrypt}(\llbracket Z \rrbracket_c) \\
+7 & \quad \quad [ \! [ Z ] \! ]_c \leftarrow [ \! [ \beta_0 ] \! ]_c \cdot [ \! [ X_0 ] \! ]_c + \sum_{k=1}^{m} [ \! [ \beta_k ] \! ]_c \cdot [ \! [ X_k ] \! ]_c \\
+8 & \quad \quad Z_c \leftarrow \text{Decrypt}([ \! [ Z ] \! ]_c) \\
 9 & \quad \quad P_c \leftarrow 0.5 + \frac{Z_c}{4} - \frac{Z_c^3}{48} \hspace{5.5cm} \text{// Degree 3 Maclaurin Sigmoid Approximation} \\
 10 & \quad \quad \text{Append } P_c \text{ to } P \\
 11 & \quad \textbf{for } j = 1 \textbf{ to } n \textbf{ do} \\
@@ -422,8 +422,8 @@ $$
 14 & \quad \quad grad_k \leftarrow \frac{1}{n} \sum_{j=1}^{n} e_j \cdot X_{claro, jk} \hspace{4cm} \text{// } X_{claro, j0} = 1 \\
 15 & \quad \quad \Delta_k \leftarrow \alpha \cdot grad_k \\
 16 & \quad \textbf{for } c = 1 \textbf{ to } C \textbf{ do} \\
-17 & \quad \quad \quad \llbracket \beta_k \rrbracket_c \leftarrow \llbracket \beta_k \rrbracket_c - \Delta_k \\
-18 & \textbf{return } \llbracket \beta_0 \rrbracket_c, \llbracket \beta_1 \rrbracket_c, \dots, \llbracket \beta_m \rrbracket_c \quad \forall c \in \{1,\dots,C\}
+17 & \quad \quad \quad [ \! [ \beta_k ] \! ]_c \leftarrow [ \! [ \beta_k ] \! ]_c - \Delta_k \\
+18 & \textbf{return } [ \! [ \beta_0 ] \! ]_c, [ \! [ \beta_1 ] \! ]_c, \dots, [ \! [ \beta_m ] \! ]_c \quad \forall c \in \{1,\dots,C\}
 \end{array}
 $$
 
