@@ -1328,33 +1328,6 @@ La configuración experimental de CKKS es:
 | Ranuras (slots) CKKS | 4096 |
 | Parámetro experimental BKZ | 450 |
 
-#### 🔒 Flujo de Datos CKKS
-
-```plaintext
-      Características QFT
-               │
-               ▼
-       Codificación CKKS
-               │
-               ▼
-       Encriptación CKKS
-               │
-               ▼
-      Vectores Encriptados
-               │
-               ▼
-    Operaciones Homomórficas
-               │
-               ▼
-  Cálculo de Modelo Encriptado
-               │
-               ▼
-    Desencriptación Controlada
-               │
-               ▼
-           Evaluación
-```
-
 **Algoritmo: CKKS Homomorphic Encryption with Automatic Chunking**
 <hr>
 
