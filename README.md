@@ -2354,15 +2354,6 @@ print("[+] PROCESAMIENTO FINALIZADO.")
 
 </details>
 
-<details>
-<summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
-
-```python
-# Tu código Python aquí
-print("Hola Mundo")
-```
-
-</details>
 ### 🧠 Modelos de Aprendizaje Automático
 
 La arquitectura soporta varios modelos de aprendizaje automático adaptados a las características numéricas del cálculo encriptado.
@@ -2410,6 +2401,2155 @@ $$
 <hr>
 
 ##### 1.2. Código Fuente
+<details>
+<summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
+
+```python
+import tenseal as ts
+import numpy as np
+import pandas as pd
+import pickle
+import os
+import time
+import math
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+
+
+
+# =====================================================================
+# FUNCIÓN PARA MOSTRAR TABLAS EN CONSOLA
+# =====================================================================
+
+def mostrar_tabla(titulo, descripcion, dataframe):
+
+    print()
+    print("=" * 100)
+    print(titulo)
+    print("=" * 100)
+
+    print()
+    print("Descripción:")
+    print(descripcion)
+
+    print()
+    print(dataframe.to_string(index=False))
+
+    print()
+    print("-" * 100)
+
+
+# =====================================================================
+# 1. CONFIGURACIÓN
+# =====================================================================
+
+# Seleccionar dataset
+DATASET = "500K"
+
+archivo_contexto = "contexto_ckks.bytes"
+
+archivo_datos_cifrados = (
+    f"Datos_cifrados_homomorficamente(ckks)/"
+    f"datos_cifrados_ckks_{DATASET}.pkl"
+)
+
+# Parámetros del entrenamiento
+LR = 0.05
+EPOCHS = 150
+
+# Inicialización de los pesos
+PESO_INICIAL = 0.01
+
+# Número de características
+FEATURES = [
+    "bias",
+    "qft_f1",
+    "qft_f2",
+    "qft_f3"
+]
+
+N_FEATURES = len(FEATURES)
+
+# Capacidad CKKS
+POLY_MODULUS_DEGREE = 8192
+SLOTS_CKKS = POLY_MODULUS_DEGREE // 2
+
+
+# =====================================================================
+# 2. CARGAR CONTEXTO CKKS
+# =====================================================================
+
+print("=" * 80)
+print("ENTRENAMIENTO HÍBRIDO CON CKKS")
+print("=" * 80)
+
+print()
+print("[1/6] Cargando contexto CKKS...")
+
+with open(archivo_contexto, "rb") as f:
+    context = ts.context_from(f.read())
+
+print("[+] Contexto CKKS cargado correctamente.")
+
+
+# =====================================================================
+# 3. CARGAR DATASET CIFRADO
+# =====================================================================
+
+print()
+print("[2/6] Cargando datos cifrados...")
+
+if not os.path.exists(archivo_datos_cifrados):
+
+    raise FileNotFoundError(
+        f"No existe el archivo:\n{archivo_datos_cifrados}"
+    )
+
+with open(archivo_datos_cifrados, "rb") as f:
+
+    datos = pickle.load(f)
+
+
+numero_registros = datos["numero_registros"]
+
+numero_chunks = datos["numero_chunks"]
+
+
+Y_target_scaled = np.asarray(
+    datos["Y_target_scaled"],
+    dtype=np.float64
+)
+
+
+y_mean = datos["y_mean"]
+
+y_scale = datos["y_scale"]
+
+
+print(
+    f"[+] Dataset cargado correctamente: {DATASET}"
+)
+
+
+# =====================================================================
+# TABLA 1
+# INFORMACIÓN DEL DATASET CIFRADO
+# =====================================================================
+
+tabla_dataset = pd.DataFrame({
+
+    "Característica": [
+
+        "Dataset",
+
+        "Número de registros",
+
+        "Número de características",
+
+        "Slots CKKS disponibles",
+
+        "Número de chunks",
+
+        "Esquema criptográfico"
+
+    ],
+
+    "Valor": [
+
+        DATASET,
+
+        f"{numero_registros:,}",
+
+        N_FEATURES,
+
+        f"{SLOTS_CKKS:,}",
+
+        numero_chunks,
+
+        "CKKS"
+
+    ]
+
+})
+
+
+mostrar_tabla(
+
+    "TABLA 1. INFORMACIÓN DEL DATASET CIFRADO",
+
+    "Presenta las características principales del conjunto de datos "
+    "cifrado utilizado como entrada para el entrenamiento del modelo "
+    "de regresión lineal bajo el esquema homomórfico CKKS.",
+
+    tabla_dataset
+
+)
+
+
+# =====================================================================
+# 4. RECONSTRUIR LOS CIPHERTEXTS
+# =====================================================================
+
+print()
+print("[3/6] Reconstruyendo ciphertexts CKKS...")
+
+X_cifrado = {}
+
+
+for feature in FEATURES:
+
+    X_cifrado[feature] = []
+
+    chunks = datos["X_cifrado_bytes"][feature]
+
+
+    print(
+        f"    {feature}: "
+        f"{len(chunks)} chunks"
+    )
+
+
+    for chunk_bytes in chunks:
+
+        vector_cifrado = ts.ckks_vector_from(
+
+            context,
+
+            chunk_bytes
+
+        )
+
+
+        X_cifrado[feature].append(
+
+            vector_cifrado
+
+        )
+
+
+print(
+    "[+] Ciphertexts reconstruidos correctamente."
+)
+
+
+# =====================================================================
+# 5. RECONSTRUIR X EN CLARO PARA EL CÁLCULO DEL GRADIENTE
+# =====================================================================
+#
+# IMPORTANTE:
+#
+# Esta sección hace que el procedimiento sea HÍBRIDO.
+#
+# Los datos se almacenan y las operaciones de predicción se realizan
+# sobre ciphertexts, pero el gradiente se calcula después de recuperar
+# los valores de X.
+#
+# Por tanto, este algoritmo NO debe denominarse entrenamiento FHE
+# completamente ciego.
+#
+# =====================================================================
+
+print()
+print(
+    "[4/6] Preparando datos para el cálculo del gradiente..."
+)
+
+
+X_claro_columnas = []
+
+
+for feature in FEATURES:
+
+    valores_feature = []
+
+
+    for chunk in X_cifrado[feature]:
+
+        valores_chunk = np.asarray(
+
+            chunk.decrypt(),
+
+            dtype=np.float64
+
+        )
+
+
+        valores_feature.extend(
+
+            valores_chunk
+
+        )
+
+
+    X_claro_columnas.append(
+
+        np.asarray(
+
+            valores_feature,
+
+            dtype=np.float64
+
+        )
+
+    )
+
+
+X_claro_local = np.column_stack(
+
+    X_claro_columnas
+
+)
+
+
+print(
+
+    f"[+] Matriz X reconstruida: "
+
+    f"{X_claro_local.shape}"
+
+)
+
+
+# =====================================================================
+# 6. CREAR PESOS CIFRADOS POR CHUNK
+# =====================================================================
+#
+# En lugar de crear:
+#
+#     ts.ckks_vector(context, [gradiente] * n_muestras)
+#
+# se mantiene un vector de pesos por cada chunk.
+#
+# Cada posición del vector contiene inicialmente el mismo peso.
+#
+# Ejemplo para 10K:
+#
+#     chunk 1 -> 4096 pesos
+#     chunk 2 -> 4096 pesos
+#     chunk 3 -> 1808 pesos
+#
+# =====================================================================
+
+print()
+print("[5/6] Inicializando pesos cifrados...")
+
+
+w = {}
+
+
+for feature in FEATURES:
+
+    w[feature] = []
+
+
+    for c in range(numero_chunks):
+
+        inicio = c * SLOTS_CKKS
+
+
+        fin = min(
+
+            inicio + SLOTS_CKKS,
+
+            numero_registros
+
+        )
+
+
+        longitud_chunk = fin - inicio
+
+
+        peso_chunk = ts.ckks_vector(
+
+            context,
+
+            [PESO_INICIAL] * longitud_chunk
+
+        )
+
+
+        w[feature].append(
+
+            peso_chunk
+
+        )
+
+
+print(
+    "[+] Pesos cifrados inicializados."
+)
+
+
+# =====================================================================
+# 7. ENTRENAMIENTO
+# =====================================================================
+
+print()
+print("=" * 80)
+print("TABLA INICIANDO ENTRENAMIENTO")
+print("=" * 80)
+
+print(
+    f"Learning rate : {LR}"
+)
+
+print(
+    f"Épocas        : {EPOCHS}"
+)
+
+
+historial_mse = []
+
+historial_rmse = []
+
+
+# Lista para almacenar todas las épocas
+tabla_entrenamiento = []
+
+
+tiempo_inicio_entrenamiento = time.perf_counter()
+
+
+for epoch in range(EPOCHS):
+
+
+    # ---------------------------------------------------------------
+    # 7.1 PREDICCIÓN CIFRADA POR CHUNKS
+    # ---------------------------------------------------------------
+
+    predicciones = []
+
+
+    for c in range(numero_chunks):
+
+
+        # -----------------------------------------------------------
+        # bias * w_bias
+        # -----------------------------------------------------------
+
+        y_pred_enc = X_cifrado["bias"][c].mul(
+
+            w["bias"][c]
+
+        )
+
+
+        # -----------------------------------------------------------
+        # qft_f1 * w1
+        # -----------------------------------------------------------
+
+        termino = X_cifrado["qft_f1"][c].mul(
+
+            w["qft_f1"][c]
+
+        )
+
+
+        y_pred_enc = y_pred_enc + termino
+
+
+        # -----------------------------------------------------------
+        # qft_f2 * w2
+        # -----------------------------------------------------------
+
+        termino = X_cifrado["qft_f2"][c].mul(
+
+            w["qft_f2"][c]
+
+        )
+
+
+        y_pred_enc = y_pred_enc + termino
+
+
+        # -----------------------------------------------------------
+        # qft_f3 * w3
+        # -----------------------------------------------------------
+
+        termino = X_cifrado["qft_f3"][c].mul(
+
+            w["qft_f3"][c]
+
+        )
+
+
+        y_pred_enc = y_pred_enc + termino
+
+
+        # -----------------------------------------------------------
+        # Descifrar únicamente la predicción del chunk
+        # -----------------------------------------------------------
+
+        y_pred_chunk = np.asarray(
+
+            y_pred_enc.decrypt(),
+
+            dtype=np.float64
+
+        )
+
+
+        predicciones.extend(
+
+            y_pred_chunk
+
+        )
+
+
+    # ---------------------------------------------------------------
+    # 7.2 PREDICCIÓN COMPLETA
+    # ---------------------------------------------------------------
+
+    Y_pred_scaled = np.asarray(
+
+        predicciones,
+
+        dtype=np.float64
+
+    )
+
+
+    # Seguridad numérica
+
+    if not np.all(
+
+        np.isfinite(Y_pred_scaled)
+
+    ):
+
+        raise RuntimeError(
+
+            "La predicción contiene valores NaN o Inf."
+
+        )
+
+
+    # ---------------------------------------------------------------
+    # 7.3 ERROR
+    # ---------------------------------------------------------------
+
+    error = (
+
+        Y_pred_scaled -
+
+        Y_target_scaled
+
+    )
+
+
+    # ---------------------------------------------------------------
+    # 7.4 GRADIENTE
+    # ---------------------------------------------------------------
+
+    gradientes = (
+
+        X_claro_local.T @ error
+
+    ) / numero_registros
+
+
+    # ---------------------------------------------------------------
+    # Verificación numérica
+    # ---------------------------------------------------------------
+
+    if not np.all(
+
+        np.isfinite(gradientes)
+
+    ):
+
+        raise RuntimeError(
+
+            f"Gradiente inválido en época {epoch + 1}: "
+
+            f"{gradientes}"
+
+        )
+
+
+    # ---------------------------------------------------------------
+    # 7.5 ACTUALIZACIÓN DE PESOS
+    # ---------------------------------------------------------------
+
+    for j, feature in enumerate(FEATURES):
+
+        delta = LR * gradientes[j]
+
+
+        if not np.isfinite(delta):
+
+            raise RuntimeError(
+
+                f"Delta inválido para {feature}: {delta}"
+
+            )
+
+
+        for c in range(numero_chunks):
+
+            w[feature][c] = (
+
+                w[feature][c].sub(delta)
+
+            )
+
+
+    # ---------------------------------------------------------------
+    # 7.6 MÉTRICAS
+    # ---------------------------------------------------------------
+
+    mse = mean_squared_error(
+
+        Y_target_scaled,
+
+        Y_pred_scaled
+
+    )
+
+
+    rmse = np.sqrt(mse)
+
+
+    historial_mse.append(mse)
+
+    historial_rmse.append(rmse)
+
+
+    # ---------------------------------------------------------------
+    # GUARDAR INFORMACIÓN DE CADA ÉPOCA
+    # ---------------------------------------------------------------
+
+    tabla_entrenamiento.append({
+
+        "Época": epoch + 1,
+
+        "MSE": mse,
+
+        "RMSE": rmse
+
+    })
+
+
+tiempo_fin_entrenamiento = time.perf_counter()
+
+
+tiempo_entrenamiento = (
+
+    tiempo_fin_entrenamiento -
+
+    tiempo_inicio_entrenamiento
+
+)
+
+
+# =====================================================================
+# TABLA 2
+# HISTORIAL COMPLETO DEL ENTRENAMIENTO
+# =====================================================================
+
+df_entrenamiento = pd.DataFrame(
+
+    tabla_entrenamiento
+
+)
+
+
+mostrar_tabla(
+
+    "TABLA 2. EVOLUCIÓN DEL ENTRENAMIENTO DEL MODELO CKKS",
+
+    "Presenta la evolución del error cuadrático medio (MSE) y de la "
+    "raíz del error cuadrático medio (RMSE) durante todas las épocas "
+    "del entrenamiento. Esta tabla permite analizar la convergencia "
+    "del modelo y verificar cómo disminuye el error durante el proceso "
+    "de optimización.",
+
+    df_entrenamiento
+
+)
+
+
+# =====================================================================
+# 8. DESCIFRAR PESOS FINALES
+# =====================================================================
+
+print()
+print("=" * 80)
+print("DESCIFRANDO PESOS FINALES")
+print("=" * 80)
+
+
+pesos_finales = []
+
+
+for feature in FEATURES:
+
+    pesos_chunks = []
+
+
+    for c in range(numero_chunks):
+
+        valores = np.asarray(
+
+            w[feature][c].decrypt(),
+
+            dtype=np.float64
+
+        )
+
+
+        pesos_chunks.extend(
+
+            valores
+
+        )
+
+
+    peso_final = np.mean(
+
+        pesos_chunks
+
+    )
+
+
+    pesos_finales.append(
+
+        peso_final
+
+    )
+
+
+pesos_finales = np.asarray(
+
+    pesos_finales,
+
+    dtype=np.float64
+
+)
+
+
+# =====================================================================
+# 9. PREDICCIÓN FINAL
+# =====================================================================
+
+Y_pred_scaled_final = (
+
+    X_claro_local @ pesos_finales
+
+)
+
+
+# Volver a la escala original
+
+Y_pred_real = (
+
+    Y_pred_scaled_final * y_scale
+
+) + y_mean
+
+
+Y_target_real = (
+
+    Y_target_scaled * y_scale
+
+) + y_mean
+
+
+# =====================================================================
+# 10. MÉTRICAS FINALES
+# =====================================================================
+
+mse_final = mean_squared_error(
+
+    Y_target_real,
+
+    Y_pred_real
+
+)
+
+
+rmse_final = np.sqrt(
+
+    mse_final
+
+)
+
+
+mae_final = mean_absolute_error(
+
+    Y_target_real,
+
+    Y_pred_real
+
+)
+
+
+r2_final = r2_score(
+
+    Y_target_real,
+
+    Y_pred_real
+
+)
+
+
+# ============================================================
+# MÓDULO ADICIONAL: ENTRENAMIENTO DEL MODELO CLÁSICO
+# ============================================================
+
+print()
+print("=" * 100)
+print("TABLA MÓDULO ADICIONAL: ENTRENAMIENTO DEL MODELO CLÁSICO")
+print("=" * 100)
+print()
+
+archivo_datos_clasicos = (
+    f"Datos_sinteticos/dataset_sintetico_{DATASET.lower()}.csv"
+)
+
+print(f"Archivo de datos originales: {archivo_datos_clasicos}")
+print()
+
+df_clasico = pd.read_csv(archivo_datos_clasicos)
+
+print(f"Registros cargados: {len(df_clasico):,}")
+print("Variables utilizadas:")
+print("  - temp_ambiente")
+print("  - num_personas")
+print("  - eficiencia_maquina")
+print("Variable objetivo:")
+print("  - consumo_kwh")
+print()
+
+X_clasico = df_clasico[
+    [
+        "temp_ambiente",
+        "num_personas",
+        "eficiencia_maquina"
+    ]
+].values
+
+y_clasico = df_clasico["consumo_kwh"].values
+
+tiempo_inicio_clasico = time.perf_counter()
+
+modelo_clasico = LinearRegression()
+
+modelo_clasico.fit(X_clasico, y_clasico)
+
+y_pred_clasico = modelo_clasico.predict(X_clasico)
+
+tiempo_fin_clasico = time.perf_counter()
+
+tiempo_entrenamiento_clasico = (
+    tiempo_fin_clasico - tiempo_inicio_clasico
+)
+
+mse_clasico = mean_squared_error(
+    y_clasico,
+    y_pred_clasico
+)
+
+rmse_clasico = np.sqrt(mse_clasico)
+
+mae_clasico = mean_absolute_error(
+    y_clasico,
+    y_pred_clasico
+)
+
+r2_clasico = r2_score(
+    y_clasico,
+    y_pred_clasico
+)
+
+df_metricas_clasico = pd.DataFrame({
+    "Métrica": [
+        "MSE",
+        "RMSE",
+        "MAE",
+        "R²"
+    ],
+    "Valor": [
+        mse_clasico,
+        rmse_clasico,
+        mae_clasico,
+        r2_clasico
+    ]
+})
+
+mostrar_tabla(
+    "TABLA MÉTRICAS DEL MODELO CLÁSICO",
+    "Resultados obtenidos mediante una regresión lineal clásica "
+    "entrenada directamente con las variables originales "
+    "temp_ambiente, num_personas y eficiencia_maquina, "
+    "utilizando consumo_kwh como variable objetivo.",
+    df_metricas_clasico
+)
+
+print(
+    f"Tiempo de entrenamiento clásico: "
+    f"{tiempo_entrenamiento_clasico:.6f} segundos"
+)
+
+
+# ============================================================
+# TABLA COMPARATIVA: CLÁSICO VS. QFT + CKKS
+# ============================================================
+
+df_comparacion = pd.DataFrame({
+    "Modelo": [
+        "Clásico",
+        "QFT + CKKS"
+    ],
+    "MSE ↓": [
+        mse_clasico,
+        mse_final
+    ],
+    "RMSE ↓": [
+        rmse_clasico,
+        rmse_final
+    ],
+    "MAE ↓": [
+        mae_clasico,
+        mae_final
+    ],
+    "R² ↑": [
+        r2_clasico,
+        r2_final
+    ]
+})
+
+df_comparacion_formateada = df_comparacion.copy()
+
+for columna in [
+    "MSE ↓",
+    "RMSE ↓",
+    "MAE ↓",
+    "R² ↑"
+]:
+    df_comparacion_formateada[columna] = (
+        df_comparacion_formateada[columna]
+        .map(lambda x: f"{x:.8f}")
+    )
+
+mostrar_tabla(
+    "TABLA COMPARATIVA: MODELO CLÁSICO VS. QFT + CKKS",
+    "Comparación del desempeño predictivo entre la regresión "
+    "lineal clásica, entrenada directamente con los datos "
+    "originales, y el modelo híbrido basado en la transformación "
+    "QFT y el esquema de cifrado homomórfico CKKS. Para MSE, "
+    "RMSE y MAE, valores menores indican menor error; para R², "
+    "un valor mayor indica un mejor ajuste del modelo.",
+    df_comparacion_formateada
+)
+
+# =====================================================================
+# 11. RESULTADOS FINALES DEL MODELO
+# =====================================================================
+
+print()
+print("=" * 80)
+print("RESULTADOS FINALES DEL MODELO")
+print("=" * 80)
+
+
+# =====================================================================
+# TABLA 3
+# PESOS FINALES DEL MODELO
+# =====================================================================
+
+df_pesos = pd.DataFrame({
+
+    "Característica": FEATURES,
+
+    "Peso final": [
+
+        f"{peso:.10f}"
+
+        for peso in pesos_finales
+
+    ]
+
+})
+
+
+mostrar_tabla(
+
+    "TABLA 3. PESOS FINALES DEL MODELO DE REGRESIÓN LINEAL CKKS",
+
+    "Presenta los pesos finales obtenidos después del entrenamiento "
+    "homomórfico. Cada peso representa la contribución de la variable "
+    "correspondiente en la ecuación de regresión utilizada para realizar "
+    "las predicciones.",
+
+    df_pesos
+
+)
+
+
+# =====================================================================
+# ECUACIÓN DEL MODELO
+# =====================================================================
+
+print()
+print("Ecuación del modelo:")
+print()
+
+print(
+
+    "Y = "
+
+    f"{pesos_finales[0]:.6f} + "
+
+    f"({pesos_finales[1]:.6f})·qft_f1 + "
+
+    f"({pesos_finales[2]:.6f})·qft_f2 + "
+
+    f"({pesos_finales[3]:.6f})·qft_f3"
+
+)
+
+
+# =====================================================================
+# 12. TABLA DE MÉTRICAS
+# =====================================================================
+
+df_metricas = pd.DataFrame({
+
+    "Métrica": [
+
+        "MSE",
+
+        "RMSE",
+
+        "MAE",
+
+        "R²"
+
+    ],
+
+    "Valor": [
+
+        mse_final,
+
+        rmse_final,
+
+        mae_final,
+
+        r2_final
+
+    ]
+
+})
+
+
+mostrar_tabla(
+
+    "TABLA 4. MÉTRICAS DE EVALUACIÓN DEL MODELO",
+
+    "Presenta las métricas utilizadas para evaluar el desempeño del "
+    "modelo de regresión lineal entrenado mediante el esquema CKKS. "
+    "El MSE, RMSE y MAE permiten cuantificar el error de predicción, "
+    "mientras que el coeficiente R² mide la proporción de variabilidad "
+    "de la variable objetivo explicada por el modelo.",
+
+    df_metricas
+
+)
+
+
+# =====================================================================
+# 13. GUARDAR TABLA DE MÉTRICAS EN CSV
+# =====================================================================
+
+archivo_metricas_csv = (
+
+    f"metricas_modelo_ckks_{DATASET}.csv"
+
+)
+
+
+df_metricas.to_csv(
+
+    archivo_metricas_csv,
+
+    index=False
+
+)
+
+
+# =====================================================================
+# 14. GENERAR TABLA LATEX
+# =====================================================================
+
+df_metricas_latex = df_metricas.copy()
+
+
+df_metricas_latex["Valor"] = (
+
+    df_metricas_latex["Valor"]
+
+    .map(lambda x: f"{x:.8f}")
+
+)
+
+
+tabla_latex = df_metricas_latex.to_latex(
+
+    index=False,
+
+    escape=False
+
+)
+
+
+archivo_metricas_latex = (
+
+    f"metricas_modelo_ckks_{DATASET}.tex"
+
+)
+
+
+with open(
+
+    archivo_metricas_latex,
+
+    "w",
+
+    encoding="utf-8"
+
+) as f:
+
+    f.write(tabla_latex)
+
+
+print()
+print(
+
+    f"[+] Tabla CSV guardada en: "
+
+    f"{archivo_metricas_csv}"
+
+)
+
+
+print(
+
+    f"[+] Tabla LaTeX guardada en: "
+
+    f"{archivo_metricas_latex}"
+
+)
+
+
+# =====================================================================
+# 15. TABLA DE EJEMPLOS DE PREDICCIÓN
+# =====================================================================
+
+np.random.seed(42)
+
+
+cantidad_muestras = min(
+
+    10,
+
+    numero_registros
+
+)
+
+
+indices = np.random.choice(
+
+    numero_registros,
+
+    cantidad_muestras,
+
+    replace=False
+
+)
+
+
+indices.sort()
+
+
+datos_prediccion = []
+
+
+for indice in indices:
+
+    real = Y_target_real[indice]
+
+    pred = Y_pred_real[indice]
+
+    error_abs = abs(
+
+        real - pred
+
+    )
+
+
+    datos_prediccion.append({
+
+        "Índice": indice,
+
+        "Valor real (kWh)": real,
+
+        "Predicción (kWh)": pred,
+
+        "Error absoluto (kWh)": error_abs
+
+    })
+
+
+df_predicciones = pd.DataFrame(
+
+    datos_prediccion
+
+)
+
+
+mostrar_tabla(
+
+    "TABLA 5. EJEMPLOS DE PREDICCIÓN DEL MODELO",
+
+    "Presenta una muestra de diez registros seleccionados aleatoriamente "
+    "para comparar el consumo energético real con el valor estimado por "
+    "el modelo. El error absoluto permite observar la diferencia entre "
+    "el valor real y la predicción para cada registro.",
+
+    df_predicciones
+
+)
+
+
+# =====================================================================
+# 16. GRÁFICO 1
+# LOSS / MSE VS. ÉPOCAS
+# =====================================================================
+
+print()
+print("=" * 100)
+print("GRÁFICO 1. EVOLUCIÓN DEL MSE DURANTE EL ENTRENAMIENTO CKKS")
+print("=" * 100)
+
+print()
+
+print(
+    "Descripción: Este gráfico muestra la evolución del error cuadrático "
+    "medio (MSE) durante las épocas de entrenamiento. Su finalidad es "
+    "evaluar la convergencia del modelo y observar la reducción progresiva "
+    "del error durante el proceso de optimización."
+)
+
+
+plt.figure(
+
+    figsize=(10, 6)
+
+)
+
+
+plt.plot(
+
+    range(1, EPOCHS + 1),
+
+    historial_mse,
+
+    linewidth=2
+
+)
+
+
+plt.xlabel(
+
+    "Época"
+
+)
+
+
+plt.ylabel(
+
+    "MSE"
+
+)
+
+
+plt.title(
+
+    f"Gráfico 1. Evolución del MSE durante el entrenamiento CKKS - {DATASET}"
+
+)
+
+
+plt.grid(
+
+    True,
+
+    alpha=0.3
+
+)
+
+
+plt.tight_layout()
+
+
+archivo_grafico_1 = (
+
+    f"grafico_1_loss_mse_{DATASET}.png"
+
+)
+
+
+plt.savefig(
+
+    archivo_grafico_1,
+
+    dpi=300
+
+)
+
+
+plt.show()
+
+
+# =====================================================================
+# 17. GRÁFICO 2
+# VALORES REALES VS. PREDICHOS
+# =====================================================================
+
+print()
+print("=" * 100)
+print("GRÁFICO 2. VALORES REALES VS. VALORES PREDICHOS")
+print("=" * 100)
+
+print()
+
+print(
+    "Descripción: Este gráfico compara los valores reales de la variable "
+    "objetivo con los valores predichos por el modelo. La proximidad de "
+    "los puntos respecto a la línea diagonal indica un mejor ajuste entre "
+    "las predicciones y los valores observados."
+)
+
+
+plt.figure(
+
+    figsize=(10, 6)
+
+)
+
+
+plt.scatter(
+
+    Y_target_real,
+
+    Y_pred_real,
+
+    alpha=0.5
+
+)
+
+
+valor_minimo = min(
+
+    Y_target_real.min(),
+
+    Y_pred_real.min()
+
+)
+
+
+valor_maximo = max(
+
+    Y_target_real.max(),
+
+    Y_pred_real.max()
+
+)
+
+
+plt.plot(
+
+    [valor_minimo, valor_maximo],
+
+    [valor_minimo, valor_maximo],
+
+    linewidth=2
+
+)
+
+
+plt.xlabel(
+
+    "Valor real"
+
+)
+
+
+plt.ylabel(
+
+    "Valor predicho"
+
+)
+
+
+plt.title(
+
+    f"Gráfico 2. Valores reales vs. valores predichos - {DATASET}"
+
+)
+
+
+plt.grid(
+
+    True,
+
+    alpha=0.3
+
+)
+
+
+plt.tight_layout()
+
+
+archivo_grafico_2 = (
+
+    f"grafico_2_real_vs_predicho_{DATASET}.png"
+
+)
+
+
+plt.savefig(
+
+    archivo_grafico_2,
+
+    dpi=300
+
+)
+
+
+plt.show()
+
+
+# =====================================================================
+# 18. GRÁFICO 3
+# RECTA DE REGRESIÓN
+# =====================================================================
+#
+# Como el modelo tiene cuatro variables, se representa la relación
+# entre qft_f1 y la predicción, manteniendo qft_f2 y qft_f3
+# en sus valores medios.
+#
+# =====================================================================
+
+indice_qft_f1 = FEATURES.index(
+
+    "qft_f1"
+
+)
+
+
+indice_qft_f2 = FEATURES.index(
+
+    "qft_f2"
+
+)
+
+
+indice_qft_f3 = FEATURES.index(
+
+    "qft_f3"
+
+)
+
+
+qft_f1_min = X_claro_local[
+
+    :, indice_qft_f1
+
+].min()
+
+
+qft_f1_max = X_claro_local[
+
+    :, indice_qft_f1
+
+].max()
+
+
+qft_f1_grid = np.linspace(
+
+    qft_f1_min,
+
+    qft_f1_max,
+
+    200
+
+)
+
+
+qft_f2_media = np.mean(
+
+    X_claro_local[
+
+        :,
+
+        indice_qft_f2
+
+    ]
+
+)
+
+
+qft_f3_media = np.mean(
+
+    X_claro_local[
+
+        :,
+
+        indice_qft_f3
+
+    ]
+
+)
+
+
+prediccion_regresion = (
+
+    pesos_finales[0]
+
+    +
+
+    pesos_finales[1] * qft_f1_grid
+
+    +
+
+    pesos_finales[2] * qft_f2_media
+
+    +
+
+    pesos_finales[3] * qft_f3_media
+
+)
+
+
+# =====================================================================
+# DESCRIPCIÓN DEL GRÁFICO 3
+# =====================================================================
+
+print()
+print("=" * 100)
+print("GRÁFICO 3. RECTA DE REGRESIÓN APRENDIDA")
+print("=" * 100)
+
+print()
+
+print(
+    "Descripción: Este gráfico representa la relación entre la característica "
+    "qft_f1 y la predicción del modelo, manteniendo qft_f2 y qft_f3 en sus "
+    "valores medios. Permite visualizar el comportamiento de la función "
+    "de regresión aprendida por el modelo."
+)
+
+
+plt.figure(
+
+    figsize=(10, 6)
+
+)
+
+
+plt.scatter(
+
+    X_claro_local[:, indice_qft_f1],
+
+    Y_target_real,
+
+    alpha=0.25,
+
+    label="Datos reales"
+
+)
+
+
+# Convertimos la predicción escalada a escala real
+
+prediccion_regresion_real = (
+
+    prediccion_regresion * y_scale
+
+) + y_mean
+
+
+plt.plot(
+
+    qft_f1_grid,
+
+    prediccion_regresion_real,
+
+    linewidth=3,
+
+    label="Recta de regresión"
+
+)
+
+
+plt.xlabel(
+
+    "qft_f1"
+
+)
+
+
+plt.ylabel(
+
+    "Variable objetivo"
+
+)
+
+
+plt.title(
+
+    f"Gráfico 3. Recta de regresión aprendida - {DATASET}"
+
+)
+
+
+plt.legend()
+
+
+plt.grid(
+
+    True,
+
+    alpha=0.3
+
+)
+
+
+plt.tight_layout()
+
+
+archivo_grafico_3 = (
+
+    f"grafico_3_recta_regresion_{DATASET}.png"
+
+)
+
+
+plt.savefig(
+
+    archivo_grafico_3,
+
+    dpi=300
+
+)
+
+
+plt.show()
+
+
+# =====================================================================
+# 19. GRÁFICO 4
+# RESIDUOS
+# =====================================================================
+#
+# Residuo:
+#
+#       e_i = y_i - ŷ_i
+#
+# =====================================================================
+
+residuos = (
+
+    Y_target_real -
+
+    Y_pred_real
+
+)
+
+
+print()
+print("=" * 100)
+print("GRÁFICO 4. ANÁLISIS DE RESIDUOS")
+print("=" * 100)
+
+print()
+
+print(
+    "Descripción: Este gráfico representa los residuos en función de "
+    "los valores predichos. Permite identificar patrones sistemáticos "
+    "en los errores y evaluar si estos se distribuyen aproximadamente "
+    "alrededor de cero."
+)
+
+
+plt.figure(
+
+    figsize=(10, 6)
+
+)
+
+
+plt.scatter(
+
+    Y_pred_real,
+
+    residuos,
+
+    alpha=0.5
+
+)
+
+
+plt.axhline(
+
+    y=0,
+
+    linewidth=2
+
+)
+
+
+plt.xlabel(
+
+    "Valores predichos"
+
+)
+
+
+plt.ylabel(
+
+    "Residuos"
+
+)
+
+
+plt.title(
+
+    f"Gráfico 4. Análisis de residuos - {DATASET}"
+
+)
+
+
+plt.grid(
+
+    True,
+
+    alpha=0.3
+
+)
+
+
+plt.tight_layout()
+
+
+archivo_grafico_4 = (
+
+    f"grafico_4_residuos_{DATASET}.png"
+
+)
+
+
+plt.savefig(
+
+    archivo_grafico_4,
+
+    dpi=300
+
+)
+
+
+plt.show()
+
+
+# =====================================================================
+# 20. GRÁFICO 5
+# DISTRIBUCIÓN DE ERRORES
+# =====================================================================
+
+errores = (
+
+    Y_target_real -
+
+    Y_pred_real
+
+)
+
+
+print()
+print("=" * 100)
+print("GRÁFICO 5. DISTRIBUCIÓN DE LOS ERRORES DE PREDICCIÓN")
+print("=" * 100)
+
+print()
+
+print(
+    "Descripción: Este gráfico muestra la distribución de los errores "
+    "obtenidos por el modelo. Permite analizar la dispersión de los "
+    "errores, observar su concentración alrededor de cero e identificar "
+    "posibles valores atípicos."
+)
+
+
+plt.figure(
+
+    figsize=(10, 6)
+
+)
+
+
+plt.hist(
+
+    errores,
+
+    bins=30,
+
+    alpha=0.8
+
+)
+
+
+plt.axvline(
+
+    x=0,
+
+    linewidth=2
+
+)
+
+
+plt.xlabel(
+
+    "Error de predicción"
+
+)
+
+
+plt.ylabel(
+
+    "Frecuencia"
+
+)
+
+
+plt.title(
+
+    f"Gráfico 5. Distribución de los errores - {DATASET}"
+
+)
+
+
+plt.grid(
+
+    True,
+
+    alpha=0.3
+
+)
+
+
+plt.tight_layout()
+
+
+archivo_grafico_5 = (
+
+    f"grafico_5_distribucion_errores_{DATASET}.png"
+
+)
+
+
+plt.savefig(
+
+    archivo_grafico_5,
+
+    dpi=300
+
+)
+
+
+plt.show()
+
+
+# =====================================================================
+# 21. RESUMEN DE GRÁFICOS
+# =====================================================================
+
+print()
+print("=" * 80)
+print("GRÁFICOS GENERADOS")
+print("=" * 80)
+
+print()
+
+print(
+
+    f"[+] Gráfico 1: {archivo_grafico_1}"
+
+)
+
+
+print(
+
+    f"[+] Gráfico 2: {archivo_grafico_2}"
+
+)
+
+
+print(
+
+    f"[+] Gráfico 3: {archivo_grafico_3}"
+
+)
+
+
+print(
+
+    f"[+] Gráfico 4: {archivo_grafico_4}"
+
+)
+
+
+print(
+
+    f"[+] Gráfico 5: {archivo_grafico_5}"
+
+)
+
+
+# =====================================================================
+# 22. GUARDAR RESULTADO COMPLETO
+# =====================================================================
+
+archivo_resultados = (
+
+    f"resultados_entrenamiento_ckks_{DATASET}.txt"
+
+)
+
+
+with open(
+
+    archivo_resultados,
+
+    "w",
+
+    encoding="utf-8"
+
+) as f:
+
+
+    f.write(
+
+        "RESULTADOS DEL ENTRENAMIENTO CKKS\n"
+
+    )
+
+
+    f.write(
+
+        "=" * 70 + "\n"
+
+    )
+
+
+    f.write(
+
+        f"Dataset: {DATASET}\n"
+
+    )
+
+
+    f.write(
+
+        f"Registros: {numero_registros}\n"
+
+    )
+
+
+    f.write(
+
+        f"Chunks: {numero_chunks}\n"
+
+    )
+
+
+    f.write(
+
+        f"Learning rate: {LR}\n"
+
+    )
+
+
+    f.write(
+
+        f"Epochs: {EPOCHS}\n"
+
+    )
+
+
+    f.write("\n")
+
+
+    # ---------------------------------------------------------------
+    # PESOS FINALES
+    # ---------------------------------------------------------------
+
+    f.write(
+
+        "PESOS FINALES\n"
+
+    )
+
+
+    f.write(
+
+        "-" * 70 + "\n"
+
+    )
+
+
+    for feature, peso in zip(
+
+        FEATURES,
+
+        pesos_finales
+
+    ):
+
+
+        f.write(
+
+            f"{feature} = {peso:.10f}\n"
+
+        )
+
+
+    f.write("\n")
+
+
+    # ---------------------------------------------------------------
+    # MODELO
+    # ---------------------------------------------------------------
+
+    f.write(
+
+        "MODELO\n"
+
+    )
+
+
+    f.write(
+
+        "-" * 70 + "\n"
+
+    )
+
+
+    f.write(
+
+        "Y = "
+
+        f"{pesos_finales[0]:.10f} + "
+
+        f"({pesos_finales[1]:.10f})*qft_f1 + "
+
+        f"({pesos_finales[2]:.10f})*qft_f2 + "
+
+        f"({pesos_finales[3]:.10f})*qft_f3\n"
+
+    )
+
+
+    f.write("\n")
+
+
+    # ---------------------------------------------------------------
+    # MÉTRICAS
+    # ---------------------------------------------------------------
+
+    f.write(
+
+        "MÉTRICAS\n"
+
+    )
+
+
+    f.write(
+
+        "-" * 70 + "\n"
+
+    )
+
+
+    f.write(
+
+        f"MSE  = {mse_final:.10f}\n"
+
+    )
+
+
+    f.write(
+
+        f"RMSE = {rmse_final:.10f}\n"
+
+    )
+
+
+    f.write(
+
+        f"MAE  = {mae_final:.10f}\n"
+
+    )
+
+
+    f.write(
+
+        f"R2   = {r2_final:.10f}\n"
+
+    )
+
+
+    f.write("\n")
+
+
+    # ---------------------------------------------------------------
+    # TIEMPO
+    # ---------------------------------------------------------------
+
+    f.write(
+
+        f"Tiempo entrenamiento = "
+
+        f"{tiempo_entrenamiento:.6f} segundos\n"
+
+    )
+
+
+print()
+
+print(
+
+    f"[+] Resultado completo guardado en: "
+
+    f"{archivo_resultados}"
+
+)
+
+
+# =====================================================================
+# 23. FINAL
+# =====================================================================
+
+print()
+print("=" * 80)
+print("PROCESAMIENTO FINALIZADO CORRECTAMENTE")
+print("=" * 80)
+```
+
+</details>
+
 ##### 1.3. Resultados: Tablas
 ##### 1.4. Resultados: Figuras
 
@@ -2460,6 +4600,15 @@ $$
 <hr>
 
 ##### 2.2. Código Fuente
+<details>
+<summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
+
+```python
+# Tu código Python aquí
+print("Hola Mundo")
+```
+
+</details>
 ##### 2.3. Resultados: Tablas
 ##### 2.4. Resultados: Figuras
 
@@ -2508,7 +4657,19 @@ $$
 $$
 
 <hr>
+
 ##### 3.2. Código Fuente
+
+<details>
+<summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
+
+```python
+# Tu código Python aquí
+print("Hola Mundo")
+```
+
+</details>
+
 ##### 3.3. Resultados: Tablas
 ##### 3.4. Resultados: Figuras
 
@@ -2557,6 +4718,17 @@ $$
 <hr>
 
 ##### 4.2. Código Fuente
+
+<details>
+<summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
+
+```python
+# Tu código Python aquí
+print("Hola Mundo")
+```
+
+</details>
+
 ##### 4.3. Resultados: Tablas
 ##### 4.4. Resultados: Figuras
 
