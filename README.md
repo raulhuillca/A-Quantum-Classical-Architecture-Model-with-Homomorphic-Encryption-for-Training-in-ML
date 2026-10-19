@@ -8964,40 +8964,43 @@ Los modelos de clasificación se evalúan utilizando:
 ### ⏱️ Estructura del Repositorio
 
 ```text
-Aprendizaje_automatico_cifrado_homorfico/
-│
-├── data/
-│   ├── raw/
-│   │   ├── dataset_sintetico_1k.csv
-│   │   ├── dataset_sintetico_10k.csv
-│   │   ├── dataset_sintetico_100k.csv
-│   │   ├── dataset_sintetico_500k.csv
-│   │   └── dataset_sintetico_1m.csv
+📦 Aprendizaje_automatico_cifrado_homorfico/
+├── 📂 data/                    # Datasets del proyecto
+│   ├── 📁 raw/                 # Datos sintéticos originales (TVAE)
+│   │   ├── 📄 dataset_sintetico_1k.csv
+│   │   ├── 📄 dataset_sintetico_10k.csv
+│   │   ├── 📄 dataset_sintetico_100k.csv
+│   │   └── 📄 dataset_sintetico_500k.csv
 │   │
-│   └── qft/
-│       ├── dataset_qft_1k.csv
-│       ├── dataset_qft_10k.csv
-│       ├── dataset_qft_100k.csv
-│       ├── dataset_qft_500k.csv
-│       └── dataset_qft_1m.csv
-│
-├── src/
-│   ├── generar_datos_sinteticos.py
-│   ├── 01_procesamiento_qft.py
-│   ├── 02_cifrado_ckks.py
-│   ├── 03_01_entrenamiento_ciego.py
+│   ├── 📁 qft/                 # Datos transformados con Quantum Fourier Transform
+│   │   ├── 📄 dataset_qft_1k.csv
+│   │   ├── 📄 dataset_qft_10k.csv
+│   │   ├── 📄 dataset_qft_100k.csv
+│   │   └── 📄 dataset_qft_500k.csv
 │   │
-│   └── config/
-│       └── contexto_ckks.bytes
+│   └── 📁 ckks/                # Datos cifrados homomórficamente
+│       ├── 🔐 dataset_ckks_1k.bytes
+│       ├── 🔐 dataset_ckks_10k.bytes
+│       ├── 🔐 dataset_ckks_100k.bytes
+│       └── 🔐 dataset_ckks_500k.bytes
 │
-├── results/
-│   ├── figures/
-│   ├── tables/
-│   └── logs/
+├── 📂 src/                     # Scripts de entrenamiento ciego
+│   ├── 🐍 RL_entrenamiento_ciego.py     # Entrena Regresión Lineal sobre data/ckks/
+│   ├── 🐍 RL0_entrenamiento_ciego.py    # Entrena Regresión Logística sobre data/ckks/
+│   ├── 🐍 LSSVM_entrenamiento_ciego.py  # Entrena LS-SVM sobre data/ckks/
+│   ├── 🐍 MLP_entrenamiento_ciego.py    # Entrena Shallow MLP sobre data/ckks/
+│   │
+│   └── 📁 config/              # Parámetros y contexto criptográfico
+│       └── 🔐 contexto_ckks.bytes      # Parámetros/Claves para el entrenamiento ciego
 │
-├── requirements.txt
-├── README.md
-└── LICENSE
+├── 📂 results/                 # Salidas y métricas experimentales
+│   ├── 📊 figures/             # Gráficos de precisión y rendimiento
+│   ├── 📑 tables/              # Tablas de resultados exportadas
+│   └── 📝 logs/                # Registros de ejecución y memoria
+│
+├── ⚙️ requirements.txt         # Dependencias (TenSEAL, Qiskit, SDV, etc.)
+├── 📖 README.md                # Documentación del proyecto
+└── ⚖️ LICENSE                  # Licencia de uso
 ```
 
 ### 🚀 Instalación
