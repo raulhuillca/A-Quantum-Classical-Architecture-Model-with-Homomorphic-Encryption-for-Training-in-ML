@@ -89,11 +89,16 @@ La arquitectura evalúa la interacción entre:
 │     Transform     │     Scheme        │     (RL/SVM/MLP)  │    End     │
 └───────────────────┴───────────────────┴───────────────────┴────────────┘
 ```
-### 📐 Fundamentos Matemáticos
+### 📐 Fundamentos teóricos
 
-#### 1. Codificación de Amplitud
+#### 1. Generación de datos sintéticos
+#### 2. Codificación de Amplitud
 
-Sea:
+
+
+#### 2. Transformada Cuántica de Fourier
+
+La amplitud se define como:
 
 $$x=[x_0,x_1,\ldots,x_{N-1}]$$
 
@@ -106,8 +111,6 @@ sujeto a:
 $$\sum_{k=0}^{N-1}\vert{}x_k\vert{}^2=1$$
 
 La codificación de amplitud permite que un vector clásico sea representado a través de las amplitudes de un estado cuántico.
-
-#### 2. Transformada Cuántica de Fourier
 
 La Transformada Cuántica de Fourier se define como:
 
