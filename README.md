@@ -73,7 +73,11 @@ La arquitectura evalúa la interacción entre:
 │     Transform     │     Scheme        │     (RL/SVM/MLP)  │    End     │
 └───────────────────┴───────────────────┴───────────────────┴────────────┘
 ```
+---
+
 ### 📐 Fundamentos teóricos
+
+---
 
 ### 1. Generación de datos sintéticos
 
