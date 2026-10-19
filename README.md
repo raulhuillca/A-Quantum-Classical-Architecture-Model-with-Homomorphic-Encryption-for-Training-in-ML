@@ -7947,8 +7947,984 @@ $$
 <summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
 
 ```python
-# Tu código Python aquí
-print("Hola Mundo")
+import tenseal as ts
+import numpy as np
+import pandas as pd
+import pickle
+import os
+import time
+import matplotlib.pyplot as plt
+from sklearn.neural_network import MLPRegressor
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+
+
+# =====================================================================
+# FUNCIÓN PARA MOSTRAR TABLAS EN CONSOLA
+# =====================================================================
+
+def mostrar_tabla(titulo, descripcion, dataframe):
+    print()
+    print("=" * 100)
+    print(titulo)
+    print("=" * 100)
+    print()
+    print("Descripción:")
+    print(descripcion)
+    print()
+    print(dataframe.to_string(index=False))
+    print()
+    print("-" * 100)
+
+
+# =====================================================================
+# 1. CONFIGURACIÓN
+# =====================================================================
+
+DATASET = "500K"
+archivo_contexto = "contexto_ckks.bytes"
+archivo_datos_cifrados = (
+    f"Datos_cifrados_homomorficamente(ckks)/"
+    f"datos_cifrados_ckks_{DATASET}.pkl"
+)
+
+# Parámetros del entrenamiento MLP superficial
+LR = 0.01
+EPOCHS = 150
+PESO_INICIAL = 0.01
+N_HIDDEN = 4
+
+# Activación cuadrática: f(z) = z^2.
+# Se utiliza porque es polinómica y permite mantener una operación
+# compatible con la arquitectura experimental CKKS. Para evitar problemas
+# de escala CKKS, la activación se evalúa después de descifrar el preactivado.
+
+FEATURES = ["bias", "qft_f1", "qft_f2", "qft_f3"]
+N_INPUTS = len(FEATURES)
+SLOTS_CKKS = 8192 // 2
+
+
+# =====================================================================
+# 2. CARGAR CONTEXTO CKKS
+# =====================================================================
+
+print("=" * 80)
+print("ENTRENAMIENTO MLP SUPERFICIAL CON CKKS")
+print("=" * 80)
+print()
+print("[1/6] Cargando contexto CKKS...")
+
+with open(archivo_contexto, "rb") as f:
+    context = ts.context_from(f.read())
+
+print("[+] Contexto CKKS cargado correctamente.")
+
+
+# =====================================================================
+# 3. CARGAR DATASET CIFRADO
+# =====================================================================
+
+print()
+print("[2/6] Cargando datos cifrados...")
+
+if not os.path.exists(archivo_datos_cifrados):
+    raise FileNotFoundError(f"No existe el archivo:\n{archivo_datos_cifrados}")
+
+with open(archivo_datos_cifrados, "rb") as f:
+    datos = pickle.load(f)
+
+numero_registros = datos["numero_registros"]
+numero_chunks = datos["numero_chunks"]
+Y_target_scaled = np.asarray(datos["Y_target_scaled"], dtype=np.float64)
+y_mean = datos["y_mean"]
+y_scale = datos["y_scale"]
+
+print(f"[+] Dataset cargado correctamente: {DATASET}")
+
+
+# =====================================================================
+# TABLA 1
+# INFORMACIÓN DEL DATASET CIFRADO
+# =====================================================================
+
+tabla_dataset = pd.DataFrame({
+    "Característica": [
+        "Dataset",
+        "Número de registros",
+        "Número de entradas",
+        "Neuronas capa oculta",
+        "Slots CKKS disponibles",
+        "Número de chunks",
+        "Esquema criptográfico",
+        "Arquitectura MLP"
+    ],
+    "Valor": [
+        DATASET,
+        f"{numero_registros:,}",
+        N_INPUTS - 1,
+        N_HIDDEN,
+        f"{SLOTS_CKKS:,}",
+        numero_chunks,
+        "CKKS",
+        f"{N_INPUTS - 1}-{N_HIDDEN}-1"
+    ]
+})
+
+mostrar_tabla(
+    "TABLA 1. INFORMACIÓN DEL DATASET CIFRADO",
+    "Presenta las características principales del conjunto de datos "
+    "cifrado utilizado como entrada para el entrenamiento del modelo "
+    "MLP superficial bajo el esquema homomórfico CKKS.",
+    tabla_dataset
+)
+
+
+# =====================================================================
+# 4. RECONSTRUIR LOS CIPHERTEXTS
+# =====================================================================
+
+print()
+print("[3/6] Reconstruyendo ciphertexts CKKS...")
+
+X_cifrado = {}
+
+for feature in FEATURES:
+    X_cifrado[feature] = []
+    chunks = datos["X_cifrado_bytes"][feature]
+    print(f"    {feature}: {len(chunks)} chunks")
+
+    for chunk_bytes in chunks:
+        vector_cifrado = ts.ckks_vector_from(context, chunk_bytes)
+        X_cifrado[feature].append(vector_cifrado)
+
+print("[+] Ciphertexts reconstruidos correctamente.")
+
+
+# =====================================================================
+# 5. RECONSTRUIR X EN CLARO PARA EL CÁLCULO DEL GRADIENTE
+# =====================================================================
+#
+# IMPORTANTE:
+#
+# El experimento mantiene la misma naturaleza HÍBRIDA de las versiones
+# anteriores: los datos de entrada se almacenan cifrados y las operaciones
+# de la primera capa se realizan sobre ciphertexts, pero para el cálculo
+# de la activación cuadrática, salida y gradientes se recuperan valores en
+# claro. Por ello NO se denomina entrenamiento FHE completamente ciego.
+# =====================================================================
+
+print()
+print("[4/6] Preparando datos para el cálculo del gradiente...")
+
+X_claro_columnas = []
+
+for feature in FEATURES:
+    valores_feature = []
+
+    for chunk in X_cifrado[feature]:
+        valores_chunk = np.asarray(chunk.decrypt(), dtype=np.float64)
+        valores_feature.extend(valores_chunk)
+
+    X_claro_columnas.append(np.asarray(valores_feature, dtype=np.float64))
+
+X_claro_local = np.column_stack(X_claro_columnas)
+
+if X_claro_local.shape[0] != numero_registros:
+    raise ValueError("La cantidad de registros reconstruidos no coincide con el dataset.")
+
+print(f"[+] Matriz X reconstruida: {X_claro_local.shape}")
+
+
+# =====================================================================
+# PREPARAR VARIABLE OBJETIVO PARA MLP
+# =====================================================================
+#
+# El MLP se plantea como REGRESIÓN porque consumo_kwh es una variable
+# continua. Se conserva la misma variable objetivo escalada utilizada
+# durante la generación del dataset CKKS.
+# =====================================================================
+
+y_objetivo = Y_target_scaled[:numero_registros].astype(np.float64)
+
+if len(y_objetivo) != numero_registros:
+    raise ValueError("La variable objetivo no coincide con el número de registros.")
+
+print()
+print("[+] Variable objetivo preparada para MLP.")
+print("    Tipo de problema: regresión")
+print(f"    Media original de consumo_kwh: {y_mean}")
+print(f"    Escala original de consumo_kwh: {y_scale}")
+print("    Activación de la capa oculta: f(z) = z²")
+print(f"    Neuronas de la capa oculta: {N_HIDDEN}")
+print()
+
+
+# =====================================================================
+# 6. CREAR PESOS CIFRADOS POR CHUNK
+# =====================================================================
+#
+# Se mantiene un conjunto de pesos cifrados para cada neurona de la capa
+# oculta y para cada chunk. Cada peso ocupa todas las posiciones del chunk.
+# =====================================================================
+
+print()
+print("[5/6] Inicializando pesos cifrados de la capa oculta...")
+
+# Pesos de entrada -> capa oculta.
+# Cada elemento tiene forma [neurona, característica, chunk].
+W_cifrado = [
+    [
+        [] for _ in range(N_INPUTS)
+    ] for _ in range(N_HIDDEN)
+]
+
+for h in range(N_HIDDEN):
+    for j, feature in enumerate(FEATURES):
+        for c in range(numero_chunks):
+            inicio = c * SLOTS_CKKS
+            fin = min(inicio + SLOTS_CKKS, numero_registros)
+            longitud_chunk = fin - inicio
+
+            peso_chunk = ts.ckks_vector(
+                context,
+                [PESO_INICIAL] * longitud_chunk
+            )
+            W_cifrado[h][j].append(peso_chunk)
+
+# Pesos de la capa oculta -> salida.
+V_cifrado = []
+for h in range(N_HIDDEN):
+    pesos_h = []
+    for c in range(numero_chunks):
+        inicio = c * SLOTS_CKKS
+        fin = min(inicio + SLOTS_CKKS, numero_registros)
+        longitud_chunk = fin - inicio
+
+        pesos_h.append(
+            ts.ckks_vector(
+                context,
+                [PESO_INICIAL] * longitud_chunk
+            )
+        )
+    V_cifrado.append(pesos_h)
+
+# Bias de salida como peso adicional cifrado.
+bias_salida_cifrado = []
+for c in range(numero_chunks):
+    inicio = c * SLOTS_CKKS
+    fin = min(inicio + SLOTS_CKKS, numero_registros)
+    longitud_chunk = fin - inicio
+    bias_salida_cifrado.append(
+        ts.ckks_vector(context, [PESO_INICIAL] * longitud_chunk)
+    )
+
+print("[+] Pesos cifrados inicializados.")
+
+
+# Copias numéricas para actualización y regularización.
+W_actual = np.full((N_HIDDEN, N_INPUTS), PESO_INICIAL, dtype=np.float64)
+V_actual = np.full(N_HIDDEN, PESO_INICIAL, dtype=np.float64)
+b_actual = PESO_INICIAL
+
+
+# =====================================================================
+# 7. ENTRENAMIENTO MLP SUPERFICIAL
+# =====================================================================
+#
+# Arquitectura:
+#
+#       qft_f1 ─┐
+#       qft_f2 ─┼──> [capa oculta N_HIDDEN, activación z²] ──> salida
+#       qft_f3 ─┘
+#
+# Cada neurona oculta calcula:
+#
+#       z_h = X W_h
+#       a_h = z_h²
+#
+# y la salida:
+#
+#       y_hat = b + sum_h(V_h a_h)
+#
+# La primera combinación lineal se realiza sobre ciphertexts. La activación
+# cuadrática y el cálculo de la salida se realizan después de descifrar los
+# preactivados, manteniendo el protocolo híbrido y evitando explosión de
+# escala en CKKS por multiplicaciones consecutivas.
+# =====================================================================
+
+print()
+print("=" * 80)
+print("INICIANDO ENTRENAMIENTO MLP SUPERFICIAL")
+print("=" * 80)
+print(f"Learning rate : {LR}")
+print(f"Épocas        : {EPOCHS}")
+print(f"Arquitectura : {N_INPUTS - 1}-{N_HIDDEN}-1")
+print("Activación    : z²")
+
+historial_mse = []
+historial_rmse = []
+historial_mae = []
+tabla_entrenamiento = []
+
+
+# Para el MLP se utiliza descenso de gradiente por época.
+tiempo_inicio_entrenamiento = time.perf_counter()
+
+for epoch in range(EPOCHS):
+    z_ocultos = np.zeros((numero_registros, N_HIDDEN), dtype=np.float64)
+
+    # ---------------------------------------------------------------
+    # Primera capa: predictor cifrado
+    # ---------------------------------------------------------------
+    for h in range(N_HIDDEN):
+        puntuacion_neurona = []
+
+        for c in range(numero_chunks):
+            z_enc = X_cifrado["bias"][c].mul(W_cifrado[h][0][c])
+
+            for j, feature in enumerate(["qft_f1", "qft_f2", "qft_f3"], start=1):
+                termino = X_cifrado[feature][c].mul(W_cifrado[h][j][c])
+                z_enc = z_enc + termino
+
+            # Descifrar el preactivado únicamente para evitar una cadena
+            # de multiplicaciones ciphertext-ciphertext que desborde escala.
+            z_chunk = np.asarray(z_enc.decrypt(), dtype=np.float64)
+            puntuacion_neurona.extend(z_chunk)
+
+        z_ocultos[:, h] = np.asarray(puntuacion_neurona, dtype=np.float64)
+
+    if not np.all(np.isfinite(z_ocultos)):
+        raise RuntimeError("La capa oculta contiene valores NaN o Inf.")
+
+    # Activación polinómica superficial.
+    a_ocultos = np.square(z_ocultos)
+
+    # Salida de la red.
+    y_pred = b_actual + a_ocultos @ V_actual
+
+    if not np.all(np.isfinite(y_pred)):
+        raise RuntimeError("La salida del MLP contiene valores NaN o Inf.")
+
+    error = y_pred - y_objetivo
+
+    mse = np.mean(error ** 2)
+    rmse = np.sqrt(mse)
+    mae = np.mean(np.abs(error))
+
+    # ---------------------------------------------------------------
+    # Retropropagación
+    # ---------------------------------------------------------------
+    # dMSE/dy_hat = 2(y_hat-y)/N
+    d_salida = (2.0 / numero_registros) * error
+
+    grad_b = np.sum(d_salida)
+    grad_V = a_ocultos.T @ d_salida
+
+    # Derivada de z²: 2z
+    d_z = (d_salida[:, None] * V_actual[None, :]) * (2.0 * z_ocultos)
+    grad_W = (d_z.T @ X_claro_local) / numero_registros
+
+    if not np.all(np.isfinite(grad_W)) or not np.all(np.isfinite(grad_V)):
+        raise RuntimeError(f"Gradiente inválido en época {epoch + 1}.")
+
+    # Actualización de pesos numéricos.
+    W_actual -= LR * grad_W
+    V_actual -= LR * grad_V
+    b_actual -= LR * grad_b
+
+    # Actualización de los pesos cifrados de la primera capa.
+    for h in range(N_HIDDEN):
+        for j in range(N_INPUTS):
+            delta = LR * grad_W[h, j]
+            for c in range(numero_chunks):
+                W_cifrado[h][j][c] = W_cifrado[h][j][c].sub(delta)
+
+    # Actualización de pesos de salida y bias cifrados para conservar la
+    # representación de los parámetros dentro del esquema CKKS.
+    for h in range(N_HIDDEN):
+        delta = LR * grad_V[h]
+        for c in range(numero_chunks):
+            V_cifrado[h][c] = V_cifrado[h][c].sub(delta)
+
+    delta_b = LR * grad_b
+    for c in range(numero_chunks):
+        bias_salida_cifrado[c] = bias_salida_cifrado[c].sub(delta_b)
+
+    historial_mse.append(mse)
+    historial_rmse.append(rmse)
+    historial_mae.append(mae)
+
+    tabla_entrenamiento.append({
+        "Época": epoch + 1,
+        "MSE": mse,
+        "RMSE": rmse,
+        "MAE": mae
+    })
+
+
+tiempo_fin_entrenamiento = time.perf_counter()
+tiempo_entrenamiento = tiempo_fin_entrenamiento - tiempo_inicio_entrenamiento
+
+
+# =====================================================================
+# TABLA 2
+# HISTORIAL COMPLETO DEL ENTRENAMIENTO
+# =====================================================================
+
+df_entrenamiento = pd.DataFrame(tabla_entrenamiento)
+
+mostrar_tabla(
+    "TABLA 2. EVOLUCIÓN DEL ENTRENAMIENTO DEL MLP CKKS",
+    "Presenta la evolución del MSE, RMSE y MAE durante todas las épocas "
+    "del entrenamiento. Estas métricas permiten analizar la convergencia "
+    "de la red neuronal superficial y la reducción progresiva del error.",
+    df_entrenamiento
+)
+
+
+# =====================================================================
+# 8. DESCIFRAR PESOS FINALES
+# =====================================================================
+
+print()
+print("=" * 80)
+print("DESCIFRANDO PESOS FINALES")
+print("=" * 80)
+
+# Los pesos numéricos se mantienen sincronizados con sus representaciones
+# cifradas durante el entrenamiento. Se reportan los valores finales.
+W_finales = W_actual.copy()
+V_finales = V_actual.copy()
+b_final = b_actual
+
+
+# =====================================================================
+# 9. PREDICCIÓN FINAL MLP
+# =====================================================================
+
+Z_final = X_claro_local @ W_finales.T
+A_final = np.square(Z_final)
+Y_pred_final = b_final + A_final @ V_finales
+
+mse_final = mean_squared_error(y_objetivo, Y_pred_final)
+rmse_final = np.sqrt(mse_final)
+mae_final = mean_absolute_error(y_objetivo, Y_pred_final)
+r2_final = r2_score(y_objetivo, Y_pred_final)
+
+# Desescalar únicamente para presentar el error en la unidad original.
+y_real_original = y_objetivo * y_scale + y_mean
+y_pred_original = Y_pred_final * y_scale + y_mean
+
+mse_original = mean_squared_error(y_real_original, y_pred_original)
+rmse_original = np.sqrt(mse_original)
+mae_original = mean_absolute_error(y_real_original, y_pred_original)
+r2_original = r2_score(y_real_original, y_pred_original)
+
+
+# =====================================================================
+# MÓDULO ADICIONAL: ENTRENAMIENTO DEL MODELO CLÁSICO MLP
+# =====================================================================
+
+print()
+print("=" * 100)
+print("MÓDULO ADICIONAL: ENTRENAMIENTO DEL MODELO CLÁSICO MLP")
+print("=" * 100)
+print()
+
+archivo_datos_clasicos = (
+    f"Datos_sinteticos/dataset_sintetico_{DATASET.lower()}.csv"
+)
+
+df_clasico = pd.read_csv(archivo_datos_clasicos)
+
+X_clasico = df_clasico[
+    ["temp_ambiente", "num_personas", "eficiencia_maquina"]
+].to_numpy(dtype=np.float64)
+y_clasico_original = df_clasico["consumo_kwh"].to_numpy(dtype=np.float64)
+
+# Se normaliza la entrada clásica de manera equivalente a la información
+# transformada usada en el pipeline QFT+CKKS.
+X_clasico_media = X_clasico.mean(axis=0)
+X_clasico_std = X_clasico.std(axis=0)
+X_clasico_std[X_clasico_std == 0] = 1.0
+X_clasico_norm = (X_clasico - X_clasico_media) / X_clasico_std
+
+y_clasico = (y_clasico_original - y_mean) / y_scale
+
+modelo_clasico = MLPRegressor(
+    hidden_layer_sizes=(N_HIDDEN,),
+    activation="relu",
+    solver="sgd",
+    learning_rate_init=LR,
+    max_iter=EPOCHS,
+    random_state=42,
+    tol=0.0,
+    shuffle=False
+)
+
+tiempo_inicio_clasico = time.perf_counter()
+modelo_clasico.fit(X_clasico_norm, y_clasico)
+tiempo_fin_clasico = time.perf_counter()
+
+tiempo_entrenamiento_clasico = tiempo_fin_clasico - tiempo_inicio_clasico
+
+pred_clasico = modelo_clasico.predict(X_clasico_norm)
+
+mse_clasico = mean_squared_error(y_clasico, pred_clasico)
+rmse_clasico = np.sqrt(mse_clasico)
+mae_clasico = mean_absolute_error(y_clasico, pred_clasico)
+r2_clasico = r2_score(y_clasico, pred_clasico)
+
+pred_clasico_original = pred_clasico * y_scale + y_mean
+mse_clasico_original = mean_squared_error(y_clasico_original, pred_clasico_original)
+rmse_clasico_original = np.sqrt(mse_clasico_original)
+mae_clasico_original = mean_absolute_error(y_clasico_original, pred_clasico_original)
+r2_clasico_original = r2_score(y_clasico_original, pred_clasico_original)
+
+
+df_metricas_clasico = pd.DataFrame({
+    "Métrica": ["MSE", "RMSE", "MAE", "R²"],
+    "Valor": [
+        mse_clasico_original,
+        rmse_clasico_original,
+        mae_clasico_original,
+        r2_clasico_original
+    ]
+})
+
+mostrar_tabla(
+    "MÉTRICAS DEL MODELO CLÁSICO MLP",
+    "Resultados obtenidos mediante una red neuronal superficial MLP clásica "
+    "entrenada directamente con las variables originales. Las métricas se "
+    "expresan en la escala original de consumo_kwh.",
+    df_metricas_clasico
+)
+
+print(f"Tiempo de entrenamiento clásico: {tiempo_entrenamiento_clasico:.6f} segundos")
+
+
+# =====================================================================
+# TABLA COMPARATIVA: CLÁSICO VS. QFT + CKKS
+# =====================================================================
+
+df_comparacion = pd.DataFrame({
+    "Modelo": ["Clásico", "QFT + CKKS"],
+    "MSE ↓": [mse_clasico_original, mse_original],
+    "RMSE ↓": [rmse_clasico_original, rmse_original],
+    "MAE ↓": [mae_clasico_original, mae_original],
+    "R² ↑": [r2_clasico_original, r2_original],
+    "Tiempo (s) ↓": [tiempo_entrenamiento_clasico, tiempo_entrenamiento]
+})
+
+df_comparacion_formateada = df_comparacion.copy()
+for columna in ["MSE ↓", "RMSE ↓", "MAE ↓", "R² ↑", "Tiempo (s) ↓"]:
+    df_comparacion_formateada[columna] = df_comparacion_formateada[columna].map(
+        lambda x: f"{x:.8f}"
+    )
+
+mostrar_tabla(
+    "TABLA COMPARATIVA: MODELO CLÁSICO VS. QFT + CKKS",
+    "Compara el desempeño del MLP clásico frente al MLP basado en QFT y CKKS. "
+    "MSE, RMSE y MAE son métricas de error, por lo que valores menores son "
+    "mejores. R² mide la capacidad explicativa del modelo y valores mayores "
+    "son mejores. El tiempo permite comparar el costo computacional del entrenamiento.",
+    df_comparacion_formateada
+)
+
+
+# =====================================================================
+# 10. RESULTADOS FINALES DEL MODELO
+# =====================================================================
+
+print()
+print("=" * 80)
+print("RESULTADOS FINALES DEL MODELO")
+print("=" * 80)
+
+
+# =====================================================================
+# TABLA 3
+# PESOS FINALES DE LA CAPA OCULTA
+# =====================================================================
+
+filas_pesos = []
+for h in range(N_HIDDEN):
+    for j, feature in enumerate(FEATURES):
+        filas_pesos.append({
+            "Neurona": f"H{h + 1}",
+            "Característica": feature,
+            "Peso": W_finales[h, j]
+        })
+
+for h in range(N_HIDDEN):
+    filas_pesos.append({
+        "Neurona": f"H{h + 1}",
+        "Característica": "peso_salida",
+        "Peso": V_finales[h]
+    })
+
+filas_pesos.append({
+    "Neurona": "Salida",
+    "Característica": "bias_salida",
+    "Peso": b_final
+})
+
+df_pesos = pd.DataFrame(filas_pesos)
+df_pesos["Peso"] = df_pesos["Peso"].map(lambda x: f"{x:.10f}")
+
+mostrar_tabla(
+    "TABLA 3. PESOS FINALES DEL MODELO MLP CKKS",
+    "Presenta los pesos finales obtenidos después del entrenamiento de la "
+    "red neuronal superficial. Se muestran los pesos de entrada de cada "
+    "neurona oculta, los pesos hacia la salida y el sesgo de salida.",
+    df_pesos
+)
+
+
+# =====================================================================
+# ECUACIÓN DEL MODELO
+# =====================================================================
+
+print()
+print("Arquitectura del modelo:")
+print()
+print(f"Entrada ({N_INPUTS - 1}) -> Capa oculta ({N_HIDDEN}) -> Salida (1)")
+print("Activación oculta: a_h = z_h²")
+print()
+print("Para cada neurona h:")
+for h in range(N_HIDDEN):
+    print(
+        f"z_{h + 1} = {W_finales[h, 0]:.6f} + "
+        f"({W_finales[h, 1]:.6f})·qft_f1 + "
+        f"({W_finales[h, 2]:.6f})·qft_f2 + "
+        f"({W_finales[h, 3]:.6f})·qft_f3"
+    )
+print()
+print("y_hat = bias_salida + Σ(V_h · z_h²)")
+
+
+# =====================================================================
+# 11. TABLA DE MÉTRICAS
+# =====================================================================
+
+df_metricas = pd.DataFrame({
+    "Métrica": ["MSE", "RMSE", "MAE", "R²"],
+    "Valor": [mse_original, rmse_original, mae_original, r2_original]
+})
+
+mostrar_tabla(
+    "TABLA 4. MÉTRICAS DE EVALUACIÓN DEL MODELO",
+    "Presenta las métricas utilizadas para evaluar el desempeño del MLP "
+    "entrenado mediante el esquema QFT + CKKS. MSE, RMSE y MAE miden el "
+    "error de predicción, mientras que R² mide la capacidad explicativa "
+    "del modelo. Los valores se expresan en la escala original de consumo_kwh.",
+    df_metricas
+)
+
+
+# =====================================================================
+# 12. GUARDAR TABLA DE MÉTRICAS EN CSV
+# =====================================================================
+
+archivo_metricas_csv = f"metricas_modelo_ckks_{DATASET}.csv"
+df_metricas.to_csv(archivo_metricas_csv, index=False)
+
+
+# =====================================================================
+# 13. GENERAR TABLA LATEX
+# =====================================================================
+
+df_metricas_latex = df_metricas.copy()
+df_metricas_latex["Valor"] = df_metricas_latex["Valor"].map(lambda x: f"{x:.8f}")
+tabla_latex = df_metricas_latex.to_latex(index=False, escape=False)
+archivo_metricas_latex = f"metricas_modelo_ckks_{DATASET}.tex"
+
+with open(archivo_metricas_latex, "w", encoding="utf-8") as f:
+    f.write(tabla_latex)
+
+print()
+print(f"[+] Tabla CSV guardada en: {archivo_metricas_csv}")
+print(f"[+] Tabla LaTeX guardada en: {archivo_metricas_latex}")
+
+
+# =====================================================================
+# 14. TABLA DE EJEMPLOS DE PREDICCIÓN
+# =====================================================================
+
+np.random.seed(42)
+cantidad_muestras = min(10, numero_registros)
+indices = np.random.choice(numero_registros, cantidad_muestras, replace=False)
+indices.sort()
+
+datos_prediccion = []
+
+for indice in indices:
+    datos_prediccion.append({
+        "Índice": indice,
+        "Consumo real (kWh)": y_real_original[indice],
+        "Consumo predicho (kWh)": y_pred_original[indice],
+        "Error absoluto (kWh)": abs(
+            y_real_original[indice] - y_pred_original[indice]
+        )
+    })
+
+df_predicciones = pd.DataFrame(datos_prediccion)
+
+mostrar_tabla(
+    "TABLA 5. EJEMPLOS DE PREDICCIÓN DEL MODELO",
+    "Presenta una muestra de diez registros seleccionados aleatoriamente "
+    "para comparar el consumo real con el consumo predicho por el MLP. "
+    "También se muestra el error absoluto de cada predicción.",
+    df_predicciones
+)
+
+
+# =====================================================================
+# 15. GRÁFICO 1
+# EVOLUCIÓN DEL ERROR DE ENTRENAMIENTO
+# =====================================================================
+
+print()
+print("=" * 100)
+print("GRÁFICO 1. EVOLUCIÓN DEL ERROR MLP DURANTE EL ENTRENAMIENTO CKKS")
+print("=" * 100)
+print()
+print(
+    "Descripción: Este gráfico muestra la evolución del MSE durante las "
+    "épocas de entrenamiento. Permite analizar la convergencia del MLP y "
+    "observar la reducción progresiva del error de entrenamiento."
+)
+
+plt.figure(figsize=(10, 6))
+plt.plot(range(1, EPOCHS + 1), historial_mse, linewidth=2)
+plt.xlabel("Época")
+plt.ylabel("MSE")
+plt.title(f"Gráfico 1. Evolución del MSE del MLP - {DATASET}")
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+archivo_grafico_1 = f"grafico_1_loss_mlp_{DATASET}.png"
+plt.savefig(archivo_grafico_1, dpi=300)
+plt.show()
+
+
+# =====================================================================
+# 16. GRÁFICO 2
+# REAL VS. PREDICHO
+# =====================================================================
+
+print()
+print("=" * 100)
+print("GRÁFICO 2. VALORES REALES VS. VALORES PREDICHOS POR EL MLP")
+print("=" * 100)
+print()
+print(
+    "Descripción: Este gráfico compara el consumo real con el consumo "
+    "predicho por el MLP. Una mayor proximidad de los puntos a la diagonal "
+    "representa una mejor capacidad predictiva del modelo."
+)
+
+plt.figure(figsize=(10, 6))
+plt.scatter(y_real_original, y_pred_original, alpha=0.5)
+minimo = min(y_real_original.min(), y_pred_original.min())
+maximo = max(y_real_original.max(), y_pred_original.max())
+plt.plot([minimo, maximo], [minimo, maximo], linestyle="--", linewidth=2)
+plt.xlabel("Consumo real (kWh)")
+plt.ylabel("Consumo predicho (kWh)")
+plt.title(f"Gráfico 2. Real vs. predicho MLP - {DATASET}")
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+archivo_grafico_2 = f"grafico_2_real_vs_predicho_mlp_{DATASET}.png"
+plt.savefig(archivo_grafico_2, dpi=300)
+plt.show()
+
+
+# =====================================================================
+# 17. GRÁFICO 3
+# SUPERFICIE / FUNCIÓN DE PREDICCIÓN MLP
+# =====================================================================
+
+indice_qft_f1 = FEATURES.index("qft_f1")
+indice_qft_f2 = FEATURES.index("qft_f2")
+indice_qft_f3 = FEATURES.index("qft_f3")
+
+qft_f1_min = X_claro_local[:, indice_qft_f1].min()
+qft_f1_max = X_claro_local[:, indice_qft_f1].max()
+qft_f1_grid = np.linspace(qft_f1_min, qft_f1_max, 200)
+qft_f2_media = np.mean(X_claro_local[:, indice_qft_f2])
+qft_f3_media = np.mean(X_claro_local[:, indice_qft_f3])
+
+X_grid = np.column_stack((
+    np.ones_like(qft_f1_grid),
+    qft_f1_grid,
+    np.full_like(qft_f1_grid, qft_f2_media),
+    np.full_like(qft_f1_grid, qft_f3_media)
+))
+
+Z_grid = X_grid @ W_finales.T
+A_grid = Z_grid ** 2
+y_grid = b_final + A_grid @ V_finales
+y_grid_original = y_grid * y_scale + y_mean
+
+print()
+print("=" * 100)
+print("GRÁFICO 3. FUNCIÓN DE PREDICCIÓN DEL MLP APRENDIDA")
+print("=" * 100)
+print()
+print(
+    "Descripción: Este gráfico representa la función de predicción aprendida "
+    "por el MLP en función de qft_f1, manteniendo qft_f2 y qft_f3 en sus "
+    "valores medios. Permite visualizar la respuesta no lineal producida "
+    "por la capa oculta con activación cuadrática."
+)
+
+plt.figure(figsize=(10, 6))
+plt.scatter(
+    X_claro_local[:, indice_qft_f1],
+    y_real_original,
+    alpha=0.25,
+    label="Valores reales"
+)
+plt.plot(
+    qft_f1_grid,
+    y_grid_original,
+    linewidth=3,
+    label="Predicción MLP"
+)
+plt.xlabel("qft_f1")
+plt.ylabel("Consumo (kWh)")
+plt.title(f"Gráfico 3. Función de predicción MLP - {DATASET}")
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+archivo_grafico_3 = f"grafico_3_funcion_prediccion_mlp_{DATASET}.png"
+plt.savefig(archivo_grafico_3, dpi=300)
+plt.show()
+
+
+# =====================================================================
+# 18. GRÁFICO 4
+# RESIDUOS MLP
+# =====================================================================
+
+residuos = y_real_original - y_pred_original
+
+print()
+print("=" * 100)
+print("GRÁFICO 4. ANÁLISIS DE RESIDUOS MLP")
+print("=" * 100)
+print()
+print(
+    "Descripción: Este gráfico representa los residuos del MLP en función "
+    "de los valores predichos. Permite identificar patrones sistemáticos "
+    "en los errores y observar si los residuos se distribuyen alrededor de cero."
+)
+
+plt.figure(figsize=(10, 6))
+plt.scatter(y_pred_original, residuos, alpha=0.5)
+plt.axhline(y=0, linewidth=2)
+plt.xlabel("Consumo predicho (kWh)")
+plt.ylabel("Residuos: real - predicho (kWh)")
+plt.title(f"Gráfico 4. Análisis de residuos MLP - {DATASET}")
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+archivo_grafico_4 = f"grafico_4_residuos_mlp_{DATASET}.png"
+plt.savefig(archivo_grafico_4, dpi=300)
+plt.show()
+
+
+# =====================================================================
+# 19. GRÁFICO 5
+# DISTRIBUCIÓN DE ERRORES MLP
+# =====================================================================
+
+errores = y_real_original - y_pred_original
+
+print()
+print("=" * 100)
+print("GRÁFICO 5. DISTRIBUCIÓN DE LOS ERRORES MLP")
+print("=" * 100)
+print()
+print(
+    "Descripción: Este gráfico muestra la distribución de los errores del "
+    "MLP. Permite analizar su dispersión, observar su concentración alrededor "
+    "de cero e identificar posibles valores atípicos."
+)
+
+plt.figure(figsize=(10, 6))
+plt.hist(errores, bins=30, alpha=0.8)
+plt.axvline(x=0, linewidth=2)
+plt.xlabel("Error MLP: real - predicho (kWh)")
+plt.ylabel("Frecuencia")
+plt.title(f"Gráfico 5. Distribución de los errores MLP - {DATASET}")
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+archivo_grafico_5 = f"grafico_5_distribucion_errores_mlp_{DATASET}.png"
+plt.savefig(archivo_grafico_5, dpi=300)
+plt.show()
+
+
+# =====================================================================
+# 20. RESUMEN DE GRÁFICOS
+# =====================================================================
+
+print()
+print("=" * 80)
+print("GRÁFICOS GENERADOS")
+print("=" * 80)
+print()
+print(f"[+] Gráfico 1: {archivo_grafico_1}")
+print(f"[+] Gráfico 2: {archivo_grafico_2}")
+print(f"[+] Gráfico 3: {archivo_grafico_3}")
+print(f"[+] Gráfico 4: {archivo_grafico_4}")
+print(f"[+] Gráfico 5: {archivo_grafico_5}")
+
+
+# =====================================================================
+# 21. GUARDAR RESULTADO COMPLETO
+# =====================================================================
+
+archivo_resultados = f"resultados_entrenamiento_mlp_{DATASET}.txt"
+
+with open(archivo_resultados, "w", encoding="utf-8") as f:
+    f.write("RESULTADOS DEL ENTRENAMIENTO MLP CKKS\n")
+    f.write("=" * 70 + "\n")
+    f.write(f"Dataset: {DATASET}\n")
+    f.write(f"Registros: {numero_registros}\n")
+    f.write(f"Chunks: {numero_chunks}\n")
+    f.write(f"Learning rate: {LR}\n")
+    f.write(f"Epochs: {EPOCHS}\n")
+    f.write(f"Arquitectura: {N_INPUTS - 1}-{N_HIDDEN}-1\n")
+    f.write("Activación oculta: z^2\n")
+    f.write("Tipo de entrenamiento: híbrido QFT + CKKS\n\n")
+
+    f.write("PESOS CAPA OCULTA\n")
+    f.write("-" * 70 + "\n")
+    for h in range(N_HIDDEN):
+        for j, feature in enumerate(FEATURES):
+            f.write(f"H{h + 1}, {feature} = {W_finales[h, j]:.10f}\n")
+        f.write(f"H{h + 1}, peso_salida = {V_finales[h]:.10f}\n")
+    f.write(f"bias_salida = {b_final:.10f}\n")
+
+    f.write("\nMÉTRICAS EN ESCALA ORIGINAL\n")
+    f.write("-" * 70 + "\n")
+    f.write(f"MSE = {mse_original:.10f}\n")
+    f.write(f"RMSE = {rmse_original:.10f}\n")
+    f.write(f"MAE = {mae_original:.10f}\n")
+    f.write(f"R2 = {r2_original:.10f}\n")
+    f.write(f"Tiempo entrenamiento = {tiempo_entrenamiento:.6f} segundos\n")
+
+print()
+print(f"[+] Resultado completo guardado en: {archivo_resultados}")
+
+
+# =====================================================================
+# 22. FINAL
+# =====================================================================
+
+print()
+print("=" * 80)
+print("PROCESAMIENTO MLP FINALIZADO CORRECTAMENTE")
+print("=" * 80)
+
 ```
 
 </details>
