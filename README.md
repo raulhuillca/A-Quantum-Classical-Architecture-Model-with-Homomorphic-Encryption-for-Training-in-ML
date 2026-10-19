@@ -4450,7 +4450,7 @@ print("=" * 80)
 ##### 1.3. Resultados: Tablas
 ##### 1.4. Resultados: Figuras
 
-#### 2. Regresión Logística
+### 🔀 2. Regresión Logística
 
 El modelo de regresión logística utiliza la función sigmoide:
 
