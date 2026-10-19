@@ -265,7 +265,202 @@ La primera etapa genera los conjuntos de datos experimentales. Ejemplo:
 
 Los datos generados son posteriormente normalizados antes del procesamiento cuántico.
 
-##### Codigo fuente
+<details>
+<summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
+
+```python
+import pandas as pd
+import numpy as np
+import os
+import warnings
+
+# =============================================================================
+# PASO 1: CONFIGURACIÓN DEL ENTORNO Y LIBRERÍAS
+# =============================================================================
+# Forzamos el uso de la CPU para evitar errores de falta de memoria (OOM) 
+# al generar grandes volúmenes de datos sintéticos con la GPU.
+os.environ["CUDA_VISIBLE_DEVICES"] = "" 
+warnings.filterwarnings('ignore')
+
+from sdv.metadata import SingleTableMetadata
+from sdv.single_table import TVAESynthesizer
+from sdv.evaluation.single_table import evaluate_quality
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
+
+# =============================================================================
+# PASO 2: GENERACIÓN DE DATOS SEMILLA (GROUND TRUTH)
+# =============================================================================
+# Fijamos la semilla aleatoria para asegurar la reproducibilidad del experimento.
+np.random.seed(42)
+n_rows_seed = 1000
+
+# Creamos las variables independientes (Matriz X) con diferentes distribuciones
+data = pd.DataFrame({
+    'temp_ambiente': np.random.normal(25, 5, n_rows_seed),
+    'num_personas': np.random.poisson(10, n_rows_seed).astype(float),
+    'eficiencia_maquina': np.random.uniform(0.5, 0.95, n_rows_seed),
+})
+
+# Definimos la relación lineal exacta (Variable objetivo Y) introduciendo ruido blanco
+# Ecuación: y = 10 + 2.5*x1 + 4.0*x2 - 12.0*x3 + ruido
+data['consumo_kwh'] = (
+    10 + 
+    (2.5 * data['temp_ambiente']) + 
+    (4.0 * data['num_personas']) - 
+    (12.0 * data['eficiencia_maquina']) + 
+    np.random.normal(0, 1, n_rows_seed)
+)
+
+print(f"[INFO] Datos semilla generados: {data.shape[0]} registros.")
+
+# =============================================================================
+# PASO 3: EXTRACCIÓN DE METADATOS Y ENTRENAMIENTO DEL MODELO TVAE
+# =============================================================================
+# SDV requiere conocer la estructura de los datos (tipos, límites) antes de modelar.
+metadata = SingleTableMetadata()
+metadata.detect_from_dataframe(data)
+
+# Instanciamos el Autoencoder Variacional (TVAE). 
+# enforce_min_max_values=True evita que genere valores lógicamente imposibles.
+synthesizer = TVAESynthesizer(
+    metadata,
+    enforce_min_max_values=True,
+    epochs=500
+)
+
+print("[INFO] Entrenando TVAE (Variational Autoencoder) para preservar relaciones lineales...")
+synthesizer.fit(data)
+print("[INFO] Entrenamiento completado.")
+
+# =============================================================================
+# PASO 4: FUNCIÓN DE GENERACIÓN MASIVA POR LOTES (BATCHING)
+# =============================================================================
+def generar_sinteticos_masivos(synthesizer, total_rows, batch_size=10000):
+    """
+    Genera grandes volúmenes de datos sintéticos dividiendo la carga en lotes.
+    Esto previene el colapso de la memoria RAM/VRAM al escalar a millones de registros.
+    """
+    print(f"\n[PROCESO] Generando {total_rows} datos sintéticos en lotes de {batch_size}...")
+    chunks = []
+    generados = 0
+    
+    while generados < total_rows:
+        # Calculamos el tamaño del lote actual (el último lote podría ser menor)
+        current_batch = min(batch_size, total_rows - generados)
+        
+        # Generamos la muestra del lote
+        chunk = synthesizer.sample(num_rows=current_batch)
+        chunks.append(chunk)
+        
+        # Actualizamos contadores
+        generados += current_batch
+        print(f"  -> Progreso: {generados} / {total_rows} registros generados...")
+        
+    # Concatenamos todos los lotes en un único DataFrame consolidado
+    df_masivo = pd.concat(chunks, ignore_index=True)
+    return df_masivo
+
+# =============================================================================
+# PASO 5: EJECUCIÓN DE LA GENERACIÓN Y VALIDACIÓN (TEST DE UTILIDAD)
+# =============================================================================
+# Para la prueba de validación, generaremos 10,000 datos usando nuestra nueva función
+volumen_prueba = 10000
+synthetic_data = generar_sinteticos_masivos(synthesizer, total_rows=volumen_prueba, batch_size=5000)
+
+print("\n--- TEST DE UTILIDAD: REGRESIÓN LINEAL ---")
+
+# Entrenamos un modelo de regresión con los datos reales originales
+X_real = data[['temp_ambiente', 'num_personas', 'eficiencia_maquina']]
+y_real = data['consumo_kwh']
+reg_real = LinearRegression().fit(X_real, y_real)
+
+# Entrenamos un modelo de regresión con los datos sintéticos generados
+X_sint = synthetic_data[['temp_ambiente', 'num_personas', 'eficiencia_maquina']]
+y_sint = synthetic_data['consumo_kwh']
+reg_sint = LinearRegression().fit(X_sint, y_sint)
+
+# Comparamos si el TVAE logró aprender y replicar los coeficientes originales
+print(f"Coeficientes Reales:     {reg_real.coef_}")
+print(f"Coeficientes Sintéticos: {reg_sint.coef_}")
+
+# Evaluamos la varianza explicada (R2) en ambos conjuntos
+r2_r = r2_score(y_real, reg_real.predict(X_real))
+r2_s = r2_score(y_sint, reg_sint.predict(X_sint))
+
+print(f"\nR2 Real:       {r2_r:.4f}")
+print(f"R2 Sintético:  {r2_s:.4f}")
+
+# Evaluación general de la fidelidad de la distribución multivariada usando SDV
+report = evaluate_quality(data, synthetic_data, metadata)
+print(f"\nPuntaje de Calidad General SDV: {report.get_score() * 100:.2f}%")
+
+
+# =============================================================================
+# PASO 6: EXPORTACIÓN PARA ENTORNOS DE CIFRADO (SEAL / CKKS)
+# =============================================================================
+def exportar_para_seal(df, filename="dataset_para_seal.csv"):
+    """
+    Acondiciona y exporta los datos para operaciones sobre esquemas encriptados (como CKKS).
+    La alta precisión decimal y la ausencia de valores nulos son críticos para 
+    multiplicar datos cifrados manteniendo la seguridad homomórfica y la estabilidad del ruido.
+    """
+    # Verificación de integridad: los esquemas criptográficos fallan con datos NaN
+    if df.isnull().values.any():
+        print("[ADVERTENCIA] Se detectaron valores nulos. Imputando con la media de la columna...")
+        df = df.fillna(df.mean())
+    
+    # Exportación asegurando una representación de punto flotante extendida (10 decimales)
+    # vital para la codificación polinomial de CKKS.
+    df.to_csv(filename, index=False, float_format='%.10f')
+    print(f"\n[INFO] Dataset exportado con éxito: {filename}")
+    print("[INFO] Estructura lista para ser cargada por CKKSEncoder en C++ o Python.")
+
+# Exportamos el conjunto de prueba generado
+exportar_para_seal(synthetic_data, filename=f"dataset_sintetico_{volumen_prueba}.csv")
+
+# =============================================================================
+# INSTRUCCIONES PARA GENERAR MAYORES VOLÚMENES (100k, 500k, 1M)
+# =============================================================================
+###########################################
+# =============================================================================
+# GENERACIÓN DE 1,000 DATOS (1K)
+# =============================================================================
+print("\n--- INICIANDO GENERACIÓN: 1,000 DATOS ---")
+# Como 1,000 es un volumen manejable, procesamos todo en un solo lote (batch_size=1000)
+#synthetic_data_1k = generar_sinteticos_masivos(synthesizer, total_rows=1000, batch_size=1000)
+
+# Exportamos el archivo asegurando compatibilidad con SEAL/CKKS
+#exportar_para_seal(synthetic_data_1k, filename="dataset_sintetico_1k.csv")
+
+
+# =============================================================================
+# GENERACIÓN DE 10,000 DATOS (10K)
+# =============================================================================
+print("\n--- INICIANDO GENERACIÓN: 10,000 DATOS ---")
+# Para 10,000, podemos dividirlo en 2 lotes de 5,000 para mantener la memoria liberada
+#synthetic_data_10k = generar_sinteticos_masivos(synthesizer, total_rows=10000, batch_size=5000)
+
+# Exportamos el archivo asegurando compatibilidad con SEAL/CKKS
+#exportar_para_seal(synthetic_data_10k, filename="dataset_sintetico_10k.csv")
+###########################################
+
+
+# Para generar y exportar el resto de los volúmenes, simplemente descomenta y ajusta 
+# las siguientes líneas según la capacidad de tu equipo de cómputo.
+#
+#synthetic_data_100k = generar_sinteticos_masivos(synthesizer, total_rows=100000, batch_size=10000)
+#exportar_para_seal(synthetic_data_100k, "dataset_sintetico_100k.csv")
+#
+#synthetic_data_500k = generar_sinteticos_masivos(synthesizer, total_rows=500000, batch_size=25000)
+#exportar_para_seal(synthetic_data_500k, "dataset_sintetico_500k.csv")
+#
+synthetic_data_1M = generar_sinteticos_masivos(synthesizer, total_rows=1000000, batch_size=50000)
+exportar_para_seal(synthetic_data_1M, "dataset_sintetico_1M.csv")
+```
+
+</details>
+
 <details>
 <summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
 
@@ -275,7 +470,6 @@ print("Hola Mundo")
 ```
 
 </details>
-
 ### ⚛️ Transformada Cuántica de Fourier
 
 El módulo QFT recibe un vector de características y ajusta su dimensión a la potencia de dos más cercana.
