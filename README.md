@@ -1389,15 +1389,6 @@ print("=" * 130)
 
 </details>
 
-<details>
-<summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
-
-```python
-# Tu código Python aquí
-print("Hola Mundo")
-```
-
-</details>
 ### 🔐 Canal de Encriptación Homomórfica
 
 El módulo criptográfico se implementa utilizando TenSEAL, que proporciona integraciones en Python para la encriptación homomórfica basada en Microsoft SEAL.
@@ -1467,6 +1458,911 @@ $$
 
 <hr>
 
+<details>
+<summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
+
+```python
+# import tenseal as ts
+# import pandas as pd
+# import pickle
+
+# # =================================================================
+# # APLICACION: 
+# # Tenemos los datos en el dominio de la frecuencia 1K, 10K, 100K,500K Y 1M
+# # Estos datos son cifrados homomorficamente a traves delel esquema CKKS
+# # =================================================================
+# # 1. Cifrar 1K
+# archivo_entrada = "Datos_en_el_dominio_de_frecuencias/dataset_qft_1K.csv"
+# archivo_contexto = "contexto_ckks.bytes"
+# archivo_datos_cifrados = "Datos_cifrados_homomorficamente(ckks)/datos_cifrados_ckks_1K.pkl"
+# # =================================================================
+# # 1. Cifrar 10K
+# archivo_entrada = "Datos_en_el_dominio_de_frecuencias/dataset_qft_10K.csv"
+# archivo_contexto = "contexto_ckks.bytes"
+# archivo_datos_cifrados = "Datos_cifrados_homomorficamente(ckks)/datos_cifrados_ckks_10K.pkl"
+# # =================================================================
+# # 1. Cifrar 100K
+# archivo_entrada = "Datos_en_el_dominio_de_frecuencias/dataset_qft_100K.csv"
+# archivo_contexto = "contexto_ckks.bytes"
+# archivo_datos_cifrados = "Datos_cifrados_homomorficamente(ckks)/datos_cifrados_ckks_100K.pkl"
+# # =================================================================
+# # 1. Cifrar 500K
+# archivo_entrada = "Datos_en_el_dominio_de_frecuencias/dataset_qft_500K.csv"
+# archivo_contexto = "contexto_ckks.bytes"
+# archivo_datos_cifrados = "Datos_cifrados_homomorficamente(ckks)/datos_cifrados_ckks_500K.pkl"
+# # =================================================================
+# # 1. Cifrar 1M
+# archivo_entrada = "Datos_en_el_dominio_de_frecuencias/dataset_qft_1M.csv"
+# archivo_contexto = "contexto_ckks.bytes"
+# archivo_datos_cifrados = "Datos_cifrados_homomorficamente(ckks)/datos_cifrados_ckks_1M.pkl"
+# # =================================================================
+
+
+# print("[*] Configurando Entorno CKKS...")
+# context = ts.context(ts.SCHEME_TYPE.CKKS, poly_modulus_degree=8192, coeff_mod_bit_sizes=[60, 40, 40, 60])
+# context.global_scale = 2**40
+# context.generate_galois_keys()
+
+# with open(archivo_contexto, "wb") as f:
+#     f.write(context.serialize(save_secret_key=True))
+
+# df_qft = pd.read_csv(archivo_entrada)
+# # AHORA TOMAMOS 4 COLUMNAS (El bias + 3 Frecuencias)
+# X_qft = df_qft[['bias', 'qft_f1', 'qft_f2', 'qft_f3']].values
+# Y_target_scaled = df_qft['target_scaled'].values
+
+# print("[*] Cifrando 4 vectores de características...")
+# x_cifrado = [ts.ckks_vector(context, X_qft[:, i]) for i in range(4)]
+# x_bytes = [vec.serialize() for vec in x_cifrado]
+
+# diccionario_cifrado = {
+#     'X_cifrado_bytes': x_bytes,
+#     'Y_target_scaled': Y_target_scaled,
+#     'y_mean': df_qft['y_mean'].iloc[0], # Guardamos los metadatos para el cliente
+#     'y_scale': df_qft['y_scale'].iloc[0]
+# }
+
+# with open(archivo_datos_cifrados, "wb") as f:
+#     pickle.dump(diccionario_cifrado, f)
+
+# print(f"[+] Datos cifrados guardados en {archivo_datos_cifrados}")
+
+import tenseal as ts
+import pandas as pd
+import pickle
+import os
+import time
+import platform
+import sys
+import math
+
+
+# =================================================================
+# APLICACIÓN:
+#
+# Cifrado homomórfico CKKS de datos transformados mediante QFT.
+#
+# Datasets:
+#   1K, 10K, 100K, 500K y 1M
+#
+# Se utiliza CHUNKING automático:
+#
+#   poly_modulus_degree = 8192
+#
+#   Slots CKKS disponibles:
+#
+#              8192 / 2 = 4096
+#
+# Por tanto, cada vector se divide automáticamente en bloques
+# de máximo 4096 elementos.
+# =================================================================
+
+
+# =================================================================
+# 1. DIRECTORIOS
+# =================================================================
+
+directorio_entrada = "Datos_en_el_dominio_de_frecuencias"
+
+directorio_salida = (
+    "Datos_cifrados_homomorficamente(ckks)"
+)
+
+archivo_contexto = "contexto_ckks.bytes"
+
+
+os.makedirs(
+    directorio_salida,
+    exist_ok=True
+)
+
+
+# =================================================================
+# 2. DATASETS
+# =================================================================
+
+datasets = [
+
+    ("1K", "dataset_qft_1K.csv"),
+
+    ("10K", "dataset_qft_10K.csv"),
+
+    ("100K", "dataset_qft_100K.csv"),
+
+    ("500K", "dataset_qft_500K.csv"),
+
+    ("1M", "dataset_qft_1M.csv")
+]
+
+
+# =================================================================
+# 3. PARÁMETROS CKKS
+# =================================================================
+
+POLY_MODULUS_DEGREE = 8192
+
+COEFF_MOD_BIT_SIZES = [
+    60,
+    40,
+    40,
+    60
+]
+
+GLOBAL_SCALE = 2**40
+
+
+# =================================================================
+# 4. CAPACIDAD DE SLOTS CKKS
+# =================================================================
+
+SLOTS_CKKS = POLY_MODULUS_DEGREE // 2
+
+
+print("=" * 80)
+print("CONFIGURACIÓN DEL SISTEMA CKKS")
+print("=" * 80)
+
+print(
+    f"Polynomial modulus degree : "
+    f"{POLY_MODULUS_DEGREE}"
+)
+
+print(
+    f"Slots CKKS disponibles    : "
+    f"{SLOTS_CKKS}"
+)
+
+print(
+    f"Coefficient modulus       : "
+    f"{COEFF_MOD_BIT_SIZES}"
+)
+
+print(
+    f"Global scale              : "
+    f"2^40"
+)
+
+print()
+
+
+# =================================================================
+# 5. CREAR CONTEXTO CKKS
+# =================================================================
+
+print("[*] Configurando TenSEAL...")
+
+context = ts.context(
+    ts.SCHEME_TYPE.CKKS,
+    poly_modulus_degree=POLY_MODULUS_DEGREE,
+    coeff_mod_bit_sizes=COEFF_MOD_BIT_SIZES
+)
+
+context.global_scale = GLOBAL_SCALE
+
+
+print("[*] Generando Galois Keys...")
+
+context.generate_galois_keys()
+
+print("[+] Contexto CKKS configurado correctamente.")
+
+
+# =================================================================
+# 6. GUARDAR CONTEXTO
+# =================================================================
+
+with open(
+    archivo_contexto,
+    "wb"
+) as f:
+
+    f.write(
+        context.serialize(
+            save_secret_key=True
+        )
+    )
+
+
+print(
+    f"[+] Contexto guardado en: "
+    f"{archivo_contexto}"
+)
+
+
+# =================================================================
+# 7. INFORMACIÓN DE TECNOLOGÍAS
+# =================================================================
+
+print()
+print("=" * 80)
+print("TECNOLOGÍAS UTILIZADAS")
+print("=" * 80)
+
+print(
+    f"Python              : "
+    f"{sys.version.split()[0]}"
+)
+
+print(
+    f"Sistema operativo   : "
+    f"{platform.system()} "
+    f"{platform.release()}"
+)
+
+print(
+    f"Arquitectura        : "
+    f"{platform.machine()}"
+)
+
+print(
+    f"TenSEAL             : "
+    f"{ts.__version__}"
+)
+
+print(
+    "Esquema criptográfico : CKKS"
+)
+
+print(
+    "Biblioteca subyacente : Microsoft SEAL"
+)
+
+print(
+    "Procesamiento         : CPU"
+)
+
+print(
+    "Formato entrada       : CSV"
+)
+
+print(
+    "Formato salida        : PKL"
+)
+
+print(
+    "Chunking               : Automático"
+)
+
+print(
+    f"Tamaño máximo chunk    : "
+    f"{SLOTS_CKKS:,} valores"
+)
+
+
+# =================================================================
+# 8. FUNCIÓN PARA CIFRAR UN VECTOR POR BLOQUES
+# =================================================================
+
+def cifrar_vector_por_chunks(
+    vector,
+    context,
+    chunk_size
+):
+
+    """
+    Divide un vector en bloques y cifra cada bloque
+    utilizando CKKS.
+
+    Parámetros
+    ----------
+    vector : array
+        Vector numérico a cifrar.
+
+    context : TenSEAL context
+        Contexto CKKS.
+
+    chunk_size : int
+        Número máximo de elementos por ciphertext.
+
+    Retorna
+    -------
+    lista de bytes
+        Lista de ciphertexts serializados.
+    """
+
+    chunks_cifrados = []
+
+    numero_elementos = len(vector)
+
+    numero_chunks = math.ceil(
+        numero_elementos / chunk_size
+    )
+
+    for inicio in range(
+        0,
+        numero_elementos,
+        chunk_size
+    ):
+
+        fin = min(
+            inicio + chunk_size,
+            numero_elementos
+        )
+
+        chunk = vector[
+            inicio:fin
+        ]
+
+        vector_cifrado = ts.ckks_vector(
+            context,
+            chunk.tolist()
+        )
+
+        chunks_cifrados.append(
+            vector_cifrado.serialize()
+        )
+
+    return chunks_cifrados
+
+
+# =================================================================
+# 9. PROCESAMIENTO DE DATASETS
+# =================================================================
+
+resultados = []
+
+
+print()
+print("=" * 80)
+print("INICIO DEL CIFRADO HOMOMÓRFICO")
+print("=" * 80)
+
+
+for nombre_dataset, nombre_archivo in datasets:
+
+    print()
+    print("-" * 80)
+
+    print(
+        f"DATASET: {nombre_dataset}"
+    )
+
+    print("-" * 80)
+
+
+    # =============================================================
+    # RUTAS
+    # =============================================================
+
+    archivo_entrada = os.path.join(
+        directorio_entrada,
+        nombre_archivo
+    )
+
+    archivo_salida = os.path.join(
+        directorio_salida,
+        f"datos_cifrados_ckks_{nombre_dataset}.pkl"
+    )
+
+
+    # =============================================================
+    # VERIFICAR ARCHIVO
+    # =============================================================
+
+    if not os.path.exists(
+        archivo_entrada
+    ):
+
+        print(
+            f"[!] No existe: "
+            f"{archivo_entrada}"
+        )
+
+        continue
+
+
+    # =============================================================
+    # LEER DATASET
+    # =============================================================
+
+    print(
+        f"[*] Leyendo: "
+        f"{archivo_entrada}"
+    )
+
+    df_qft = pd.read_csv(
+        archivo_entrada
+    )
+
+
+    numero_registros = len(
+        df_qft
+    )
+
+
+    print(
+        f"[+] Registros: "
+        f"{numero_registros:,}"
+    )
+
+
+    # =============================================================
+    # SELECCIONAR CARACTERÍSTICAS
+    # =============================================================
+
+    X_qft = df_qft[
+        [
+            "bias",
+            "qft_f1",
+            "qft_f2",
+            "qft_f3"
+        ]
+    ].values
+
+
+    Y_target_scaled = df_qft[
+        "target_scaled"
+    ].values
+
+
+    print(
+        "[+] Características:"
+    )
+
+    print("    - bias")
+    print("    - qft_f1")
+    print("    - qft_f2")
+    print("    - qft_f3")
+
+
+    # =============================================================
+    # NÚMERO DE CHUNKS
+    # =============================================================
+
+    numero_chunks = math.ceil(
+        numero_registros /
+        SLOTS_CKKS
+    )
+
+
+    print(
+        f"[+] Tamaño máximo por chunk: "
+        f"{SLOTS_CKKS:,}"
+    )
+
+    print(
+        f"[+] Número de chunks por característica: "
+        f"{numero_chunks}"
+    )
+
+
+    # =============================================================
+    # MOSTRAR DISTRIBUCIÓN
+    # =============================================================
+
+    for i in range(
+        numero_chunks
+    ):
+
+        inicio = (
+            i *
+            SLOTS_CKKS
+        )
+
+        fin = min(
+            inicio +
+            SLOTS_CKKS,
+            numero_registros
+        )
+
+        cantidad = fin - inicio
+
+        print(
+            f"    Chunk {i + 1}: "
+            f"{inicio:,} - {fin:,} "
+            f"({cantidad:,} valores)"
+        )
+
+
+    # =============================================================
+    # INICIAR CRONÓMETRO
+    # =============================================================
+
+    tiempo_inicio = time.perf_counter()
+
+
+    # =============================================================
+    # CIFRAR LAS 4 CARACTERÍSTICAS
+    # =============================================================
+
+    print()
+
+    print(
+        "[*] Iniciando cifrado CKKS..."
+    )
+
+
+    X_cifrado = {}
+
+
+    for indice, nombre_columna in enumerate(
+        [
+            "bias",
+            "qft_f1",
+            "qft_f2",
+            "qft_f3"
+        ]
+    ):
+
+        print(
+            f"    Cifrando {nombre_columna}..."
+        )
+
+
+        vector = X_qft[
+            :,
+            indice
+        ]
+
+
+        chunks_cifrados = (
+            cifrar_vector_por_chunks(
+                vector,
+                context,
+                SLOTS_CKKS
+            )
+        )
+
+
+        X_cifrado[
+            nombre_columna
+        ] = chunks_cifrados
+
+
+        print(
+            f"    [+] {len(chunks_cifrados)} "
+            f"chunks cifrados."
+        )
+
+
+    # =============================================================
+    # TIEMPO DE CIFRADO
+    # =============================================================
+
+    tiempo_fin = time.perf_counter()
+
+
+    tiempo_segundos = (
+        tiempo_fin -
+        tiempo_inicio
+    )
+
+
+    tiempo_minutos = (
+        tiempo_segundos /
+        60
+    )
+
+
+    # =============================================================
+    # CREAR DICCIONARIO
+    # =============================================================
+
+    diccionario_cifrado = {
+
+        "dataset": nombre_dataset,
+
+        "numero_registros":
+            numero_registros,
+
+        "poly_modulus_degree":
+            POLY_MODULUS_DEGREE,
+
+        "slots_ckks":
+            SLOTS_CKKS,
+
+        "numero_chunks":
+            numero_chunks,
+
+        "X_cifrado_bytes":
+            X_cifrado,
+
+        "Y_target_scaled":
+            Y_target_scaled,
+
+        "y_mean":
+            df_qft[
+                "y_mean"
+            ].iloc[0],
+
+        "y_scale":
+            df_qft[
+                "y_scale"
+            ].iloc[0]
+    }
+
+
+    # =============================================================
+    # GUARDAR ARCHIVO
+    # =============================================================
+
+    with open(
+        archivo_salida,
+        "wb"
+    ) as f:
+
+        pickle.dump(
+            diccionario_cifrado,
+            f,
+            protocol=pickle.HIGHEST_PROTOCOL
+        )
+
+
+    # =============================================================
+    # TAMAÑO DEL ARCHIVO
+    # =============================================================
+
+    tamanio_bytes = os.path.getsize(
+        archivo_salida
+    )
+
+
+    tamanio_mb = (
+        tamanio_bytes /
+        (1024 ** 2)
+    )
+
+
+    # =============================================================
+    # GUARDAR RESULTADOS
+    # =============================================================
+
+    resultados.append({
+
+        "Dataset":
+            nombre_dataset,
+
+        "Registros":
+            numero_registros,
+
+        "Qubits":
+            2,
+
+        "Slots CKKS":
+            SLOTS_CKKS,
+
+        "Chunks":
+            numero_chunks,
+
+        "Características":
+            4,
+
+        "Tiempo (s)":
+            tiempo_segundos,
+
+        "Tiempo (min)":
+            tiempo_minutos,
+
+        "Archivo (MB)":
+            tamanio_mb
+    })
+
+
+    # =============================================================
+    # RESULTADO
+    # =============================================================
+
+    print()
+
+    print(
+        f"[+] Dataset {nombre_dataset} "
+        f"cifrado correctamente."
+    )
+
+    print(
+        f"[+] Chunks por característica: "
+        f"{numero_chunks}"
+    )
+
+    print(
+        f"[+] Tiempo de cifrado: "
+        f"{tiempo_segundos:.4f} segundos"
+    )
+
+    print(
+        f"[+] Tiempo de cifrado: "
+        f"{tiempo_minutos:.4f} minutos"
+    )
+
+    print(
+        f"[+] Tamaño archivo: "
+        f"{tamanio_mb:.2f} MB"
+    )
+
+    print(
+        f"[+] Guardado en: "
+        f"{archivo_salida}"
+    )
+
+
+# =================================================================
+# 10. TABLA DE RESULTADOS
+# =================================================================
+
+df_resultados = pd.DataFrame(
+    resultados
+)
+
+
+print()
+print("=" * 80)
+print("TABLA FINAL DE RESULTADOS")
+print("=" * 80)
+
+print(
+    df_resultados.to_string(
+        index=False
+    )
+)
+
+
+# =================================================================
+# 11. GUARDAR CSV
+# =================================================================
+
+archivo_csv = (
+    "resultados_tiempo_cifrado_ckks.csv"
+)
+
+
+df_resultados.to_csv(
+    archivo_csv,
+    index=False
+)
+
+
+print()
+print(
+    f"[+] Resultados CSV: "
+    f"{archivo_csv}"
+)
+
+
+# =================================================================
+# 12. GENERAR TABLA LATEX
+# =================================================================
+
+df_latex = df_resultados.copy()
+
+
+df_latex[
+    "Tiempo (s)"
+] = df_latex[
+    "Tiempo (s)"
+].map(
+    lambda x: f"{x:.4f}"
+)
+
+
+df_latex[
+    "Tiempo (min)"
+] = df_latex[
+    "Tiempo (min)"
+].map(
+    lambda x: f"{x:.4f}"
+)
+
+
+df_latex[
+    "Archivo (MB)"
+] = df_latex[
+    "Archivo (MB)"
+].map(
+    lambda x: f"{x:.2f}"
+)
+
+
+latex = df_latex.to_latex(
+    index=False,
+    escape=False
+)
+
+
+archivo_latex = (
+    "tabla_tiempos_cifrado_ckks.tex"
+)
+
+
+with open(
+    archivo_latex,
+    "w",
+    encoding="utf-8"
+) as f:
+
+    f.write(
+        latex
+    )
+
+
+print(
+    f"[+] Tabla LaTeX: "
+    f"{archivo_latex}"
+)
+
+
+# =================================================================
+# 13. RESUMEN
+# =================================================================
+
+print()
+print("=" * 80)
+print("RESUMEN FINAL")
+print("=" * 80)
+
+
+print(
+    f"Datasets procesados : "
+    f"{len(resultados)}"
+)
+
+
+print(
+    f"Tiempo total        : "
+    f"{df_resultados['Tiempo (s)'].sum():.4f} segundos"
+)
+
+
+print(
+    f"Tiempo total        : "
+    f"{df_resultados['Tiempo (min)'].sum():.4f} minutos"
+)
+
+
+print()
+print("[+] Archivos generados:")
+
+
+for nombre_dataset, _ in datasets:
+
+    archivo = os.path.join(
+        directorio_salida,
+        f"datos_cifrados_ckks_{nombre_dataset}.pkl"
+    )
+
+    if os.path.exists(
+        archivo
+    ):
+
+        print(
+            f"    ✓ {archivo}"
+        )
+
+
+print()
+print("[+] PROCESAMIENTO FINALIZADO.")
+```
+
+</details>
+
+<details>
+<summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
+
+```python
+# Tu código Python aquí
+print("Hola Mundo")
+```
+
+</details>
 ### 🧠 Modelos de Aprendizaje Automático
 
 La arquitectura soporta varios modelos de aprendizaje automático adaptados a las características numéricas del cálculo encriptado.
