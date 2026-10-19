@@ -1323,6 +1323,7 @@ La configuración experimental de CKKS es:
 | Parámetro experimental BKZ | 450 |
 
 **Algoritmo: CKKS Homomorphic Encryption with Automatic Chunking**
+
 <hr>
 
 $$
