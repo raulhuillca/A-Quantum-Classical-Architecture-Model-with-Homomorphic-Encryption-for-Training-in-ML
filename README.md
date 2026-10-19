@@ -2303,8 +2303,9 @@ print("[+] PROCESAMIENTO FINALIZADO.")
 ```
 
 </details>
+---
 
-### 🧠 Modelos de Aprendizaje Automático
+## 🧠 Modelos de Aprendizaje Automático
 
 La arquitectura soporta varios modelos de aprendizaje automático adaptados a las características numéricas del cálculo encriptado.
 
