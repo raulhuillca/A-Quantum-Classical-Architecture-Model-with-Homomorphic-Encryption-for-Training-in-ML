@@ -203,16 +203,6 @@ $$
 
 <hr>
 
-La primera etapa genera los conjuntos de datos experimentales. Ejemplo:
-
-- `dataset_sintetico_1k.csv`
-- `dataset_sintetico_10k.csv`
-- `dataset_sintetico_100k.csv`
-- `dataset_sintetico_500k.csv`
-- `dataset_sintetico_1m.csv`
-
-Los datos generados son posteriormente normalizados antes del procesamiento cuántico.
-
 <details>
 <summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
 
