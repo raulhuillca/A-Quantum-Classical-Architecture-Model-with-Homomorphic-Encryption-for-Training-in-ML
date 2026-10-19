@@ -1354,7 +1354,7 @@ La configuración experimental de CKKS es:
                ▼
            Evaluación
 ```
-#### 🔒 Algoritmo
+
 **Algoritmo: CKKS Homomorphic Encryption with Automatic Chunking**
 <hr>
 
