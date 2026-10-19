@@ -92,9 +92,23 @@ La arquitectura evalúa la interacción entre:
 ### 📐 Fundamentos teóricos
 
 #### 1. Generación de datos sintéticos
-#### 2. Codificación de Amplitud
 
 
+El flujo experimental comienza con conjuntos de datos sintéticos que representan datos de consumo de energía. Las variables principales son:
+
+| Variable | Descripción |
+| :--- | :--- |
+| `temp_ambiente` | Temperatura ambiente |
+| `num_personas` | Número de personas |
+| `eficiencia_maquina` | Eficiencia de la máquina |
+| `consumo_kwh` | Objetivo de consumo de energía |
+
+Los experimentos consideran:
+
+- 1,000 registros
+- 10,000 registros
+- 100,000 registros
+- 500,000 registros
 
 #### 2. Transformada Cuántica de Fourier
 
@@ -155,24 +169,7 @@ La cadena de procesamiento conceptual es:
    Texto Plano Aproximado
 ```
 
-### 📊 Canalización y Procesamiento de Datos
 
-El flujo experimental comienza con conjuntos de datos sintéticos que representan datos de consumo de energía. Las variables principales son:
-
-| Variable | Descripción |
-| :--- | :--- |
-| `temp_ambiente` | Temperatura ambiente |
-| `num_personas` | Número de personas |
-| `eficiencia_maquina` | Eficiencia de la máquina |
-| `consumo_kwh` | Objetivo de consumo de energía |
-
-Los experimentos consideran:
-
-- 1,000 registros
-- 10,000 registros
-- 100,000 registros
-- 500,000 registros
-- 1,000,000 registros
 
 #### 1. Generación de Datos Sintéticos
 ##### El Algoritmo (TVAE Synthetic Data Generation)
