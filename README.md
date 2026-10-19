@@ -38,48 +38,6 @@ La arquitectura propuesta investiga un canal computacional híbrido en el cual l
 
 El flujo de trabajo general es:
 
-```text
-Datos Clásicos
-      │
-      ▼
-Generación de Conjunto de Datos Sintético
-      │
-      ▼
-Preprocesamiento de Datos
-      │
-      ▼
-Normalización
-      │
-      ▼
-Codificación de Amplitud
-      │
-      ▼
-Transformada Cuántica de Fourier (QFT)
-      │
-      ▼
-Representación en el Dominio de la Frecuencia
-      │
-      ▼
-Encriptación Homomórfica CKKS
-      │
-      ▼
-Aprendizaje Automático
-      │
-      ├── Regresión Lineal
-      ├── Regresión Logística
-      ├── LS-SVM
-      └── MLP
-      │
-      ▼
-Evaluación
-      │
-      ├── MSE
-      ├── RMSE
-      ├── MAE
-      ├── R²
-      └── Precisión (Accuracy)
-```
-
 ```mermaid
 graph TD
     A[📊 Datos Clásicos] --> B[🧬 Generación de Datos Sintéticos TVAE]
@@ -131,9 +89,49 @@ Aprendizaje Automático
 Preservación de la Privacidad
 ```
 
+### 🎯 Objetivo de la Investigación
+
+> 💡 **Objetivo Principal:** Diseñar, implementar y evaluar experimentalmente una arquitectura híbrida cuántico-clásica integrada con **Cifrado Homomórfico (CKKS)**, permitiendo el entrenamiento ciego de modelos de Aprendizaje Automático sobre datos representados en el dominio de la frecuencia.
+
+#### 🧩 Pilares Fundamentales de la Arquitectura
+
+| Pilar | Tecnología / Enfoque | Rol en el Pipeline |
+| :--- | :--- | :--- |
+| ⚛️ **Computación Cuántica** | Transformada Cuántica de Fourier (QFT) | Extracción de características en el dominio frecuencial |
+| 🔐 **Criptografía Avanzada** | Cifrado Homomórfico (CKKS) | Operaciones matemáticas directamente sobre datos cifrados |
+| 🤖 **Aprendizaje Automático** | Entrenamiento Ciego (RL, Logística, SVM, MLP) | Modelado predictivo supervisado sin acceso a datos planos |
+| 🛡️ **Seguridad y Privacidad** | Confidencialidad End-to-End | Protección total del dataset sintético y de los coeficientes |
+
+### 🎯 Objetivo de la Investigación
+
+El objetivo principal es desarrollar y evaluar experimentalmente una arquitectura cuántica-clásica orientada a la **preservación estricta de la privacidad** en tareas de Aprendizaje Automático.
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│                   🔬 CONVERGENCIA TECNOLÓGICA DEL PROYECTO              │
+├───────────────────┬───────────────────┬───────────────────┬────────────┤
+│  ⚛️ QFT           │  🔐 CKKS          │  🤖 Machine       │  🛡️ Data   │
+│     Quantum       │     Homomorphic   │     Learning      │    Privacy │
+│     Fourier       │     Encryption    │     Blind Models  │    End-to- │
+│     Transform     │     Scheme        │     (RL/SVM/MLP)  │    End     │
+└───────────────────┴───────────────────┴───────────────────┴────────────┘
+
+### 🎯 Objetivo de la Investigación
+
+El objetivo principal es desarrollar y evaluar experimentalmente una arquitectura cuántica-clásica con cifrado homomórfico para aplicaciones de aprendizaje automático con preservación de privacidad.
+
+```mermaid
+graph TD
+    A[⚛️ Transformada Cuántica de Fourier] --> CORE((🛡️ Arquitectura Segura))
+    B[🔐 Cifrado Homomórfico CKKS] --> CORE
+    C[🤖 Aprendizaje Automático Ciego] --> CORE
+    D[🔒 Preservación de Privacidad] --> CORE
+
+    CORE --> OUT[🚀 Modelos Entrenados sobre Datos Cifrados]
 ### 🏗️ Arquitectura del Sistema
 
 La arquitectura propuesta consta de cuatro fases principales.
+```
 
 ```plaintext
 ┌──────────────────────────────────────────────────┐
