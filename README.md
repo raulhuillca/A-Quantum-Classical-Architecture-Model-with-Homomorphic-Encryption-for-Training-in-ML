@@ -399,6 +399,8 @@ exportar_para_seal(synthetic_data_1M, "dataset_sintetico_1M.csv")
 
 </details>
 
+---
+
 ### ⚛️ 2.-Transformada Cuántica de Fourier
 
 El módulo QFT recibe un vector de características y ajusta su dimensión a la potencia de dos más cercana.
