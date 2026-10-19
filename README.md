@@ -1307,7 +1307,7 @@ print("=" * 130)
 
 ---
 
-### 🔐 3.-Canal de Encriptación Homomórfica
+### 🔐 3. Canal de Encriptación Homomórfica
 
 El módulo criptográfico se implementa utilizando TenSEAL, que proporciona integraciones en Python para la encriptación homomórfica basada en Microsoft SEAL.
 
@@ -1329,21 +1329,21 @@ $$
 \begin{array}{rl}
 & \text{Input: Plaintext feature vector } V \text{ of size } n\text{, Polynomial modulus degree } N=8192\text{,} \\
 & \quad \text{Coefficient modulus bit sizes } Q=[60, 40, 40, 60]\text{, Global scale } \Delta=2^{40} \\
-& \text{Output: List of serialized encrypted chunks } C_{enc} = \{⟦ V ⟧_1, \dots, ⟦ V ⟧_C\} \\
+& \text{Output: List of serialized encrypted chunks } C_{\text{enc}} = \{\text{⟦} V \text{⟧}_1, \dots, \text{⟦} V \text{⟧}_C\} \\
 1 & S \leftarrow N / 2 \hspace{7.5cm} \text{// Calculate available CKKS slots} \\
 2 & \mathcal{C} \leftarrow \text{Context}(\text{CKKS}, N, Q) \\
 3 & \mathcal{C}.\text{global\_scale} \leftarrow \Delta \\
 4 & \mathcal{C}.\text{generate\_galois\_keys}() \\
 5 & C \leftarrow \lceil n / S \rceil \\
-6 & C_{enc} \leftarrow [\,] \hspace{7.6cm} \text{// Initialize empty list for encrypted chunks} \\
+6 & C_{\text{enc}} \leftarrow [\,] \hspace{7.6cm} \text{// Initialize empty list for encrypted chunks} \\
 7 & \textbf{for } i = 0 \textbf{ to } C-1 \textbf{ do} \\
 8 & \quad start \leftarrow i \cdot S \\
 9 & \quad end \leftarrow \min(start + S, n) \\
-10 & \quad V_{chunk} \leftarrow V[start \dots end-1] \hspace{4cm} \text{// Extract data block} \\
-11 & \quad ⟦ V ⟧_i \leftarrow \text{CKKS\_Encrypt}(\mathcal{C}, V_{chunk}) \\
-12 & \quad B_i \leftarrow \text{Serialize}(⟦ V ⟧_i) \hspace{4.4cm} \text{// Convert to bytes for storage} \\
-13 & \quad \text{Append } B_i \text{ to } C_{enc} \\
-14 & \textbf{return } C_{enc}
+10 & \quad V_{\text{chunk}} \leftarrow V[start \dots end-1] \hspace{4cm} \text{// Extract data block} \\
+11 & \quad \text{⟦} V \text{⟧}_i \leftarrow \text{CKKS\_Encrypt}(\mathcal{C}, V_{\text{chunk}}) \\
+12 & \quad B_i \leftarrow \text{Serialize}(\text{⟦} V \text{⟧}_i) \hspace{4.4cm} \text{// Convert to bytes for storage} \\
+13 & \quad \text{Append } B_i \text{ to } C_{\text{enc}} \\
+14 & \textbf{return } C_{\text{enc}}
 \end{array}
 $$
 
