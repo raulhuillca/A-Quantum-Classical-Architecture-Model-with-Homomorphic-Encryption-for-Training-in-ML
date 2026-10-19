@@ -89,45 +89,6 @@ La arquitectura evalúa la interacción entre:
 │     Transform     │     Scheme        │     (RL/SVM/MLP)  │    End     │
 └───────────────────┴───────────────────┴───────────────────┴────────────┘
 ```
-
-### 🏗️ Arquitectura del Sistema
-
-La arquitectura propuesta consta de cuatro fases principales.
-```
-
-```plaintext
-┌──────────────────────────────────────────────────┐
-│                     FASE 1                       │
-│         PROCESAMIENTO DE DATOS CLÁSICOS          │
-│                                                  │
-│ Datos Sintéticos → Normalización → Codificación  │
-└───────────────────────┬──────────────────────────┘
-                        │
-                        ▼
-┌──────────────────────────────────────────────────┐
-│                     FASE 2                       │
-│             TRANSFORMACIÓN CUÁNTICA              │
-│                                                  │
-│           Codificación de Amplitud → QFT         │
-└───────────────────────┬──────────────────────────┘
-                        │
-                        ▼
-┌──────────────────────────────────────────────────┐
-│                     FASE 3                       │
-│             PROTECCIÓN HOMOMÓRFICA               │
-│                                                  │
-│       Representación de Frecuencia → CKKS        │
-└───────────────────────┬──────────────────────────┘
-                        │
-                        ▼
-┌──────────────────────────────────────────────────┐
-│                     FASE 4                       │
-│             APRENDIZAJE AUTOMÁTICO               │
-│                                                  │
-│     RL → Regresión Logística → LS-SVM → MLP      │
-└──────────────────────────────────────────────────┘
-```
-
 ### 📐 Fundamentos Matemáticos
 
 #### 1. Codificación de Amplitud
