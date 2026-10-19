@@ -1313,7 +1313,7 @@ print("=" * 130)
 
 </details>
 
-### 🔐 Canal de Encriptación Homomórfica
+### 🔐 3.-Canal de Encriptación Homomórfica
 
 El módulo criptográfico se implementa utilizando TenSEAL, que proporciona integraciones en Python para la encriptación homomórfica basada en Microsoft SEAL.
 
