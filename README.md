@@ -7802,8 +7802,11 @@ print("=" * 80)
 ##### 3.3. Resultados: Tablas
 ##### 3.4. Resultados: Figuras
 
+---
 
-#### 4. Perceptrón Multicapa (MLP)
+### 🧩 4. Perceptrón Multicapa (MLP)
+
+---
 
 ##### 4.1. El Algoritmo
 
