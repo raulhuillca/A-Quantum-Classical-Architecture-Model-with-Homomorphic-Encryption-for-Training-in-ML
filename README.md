@@ -9073,14 +9073,3 @@ Los experimentos se llevaron a cabo utilizando el siguiente entorno computaciona
 - **CUDA:** CUDA 11.8
 - **Stack de Software:** Python 3.12, Qiskit 1.1.1, Qiskit Aer 0.15.1, TenSEAL 0.3.16, Microsoft SEAL, NumPy, Pandas, Scikit-learn, Matplotlib
 
-
-# 🏗️ Arquitectura del Sistema
-
-```mermaid
-flowchart TD
-    st([Datos Clásicos]) --> op1[FASE 1: Procesamiento <br/> Datos Sintéticos, Normalización]
-    op1 --> op2[FASE 2: Transformación Cuántica <br/> Codificación de Amplitud, QFT]
-    op2 --> op3[FASE 3: Protección Homomórfica <br/> Frecuencia, Encriptación CKKS]
-    op3 --> op4[FASE 4: Aprendizaje Automático <br/> RL, Regresión Logística, LS-SVM, MLP]
-    op4 --> e([Evaluación])
-```
