@@ -169,7 +169,10 @@ La cadena de procesamiento conceptual es:
    Texto Plano Aproximado
 ```
 
-## 📐 Fundamentos teóricos
+---
+
+## 💻 Algoritmos, Código Fuente y Resultados
+
 #### 1. Generación de Datos Sintéticos
 ##### El Algoritmo (TVAE Synthetic Data Generation)
 
