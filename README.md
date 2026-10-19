@@ -10,26 +10,10 @@ El flujo de trabajo experimental combina el preprocesamiento clásico, la transf
 ## 📌 Tabla de Contenidos
 - [Descripción General](#-descripción-general)
 - [Objetivo de la Investigación](#-objetivo-de-la-investigación)
-- [Arquitectura del Sistema](#-arquitectura-del-sistema)
-- [Fundamentos Matemáticos](#-fundamentos-matemáticos)
-- [Canalización y Procesamiento de Datos](#-canalización-y-procesamiento-de-datos)
-- [Transformada Cuántica de Fourier](#️-transformada-cuántica-de-fourier)
-- [Canal de Encriptación Homomórfica](#-canal-de-encriptación-homomórfica)
 - [Modelos de Aprendizaje Automático](#-modelos-de-aprendizaje-automático)
-- [Configuración Experimental](#-configuración-experimental)
 - [Métricas de Evaluación](#-métricas-de-evaluación)
-- [Resultados Experimentales](#-resultados-experimentales)
-- [Estructura del Repositorio](#-estructura-del-repositorio)
 - [Instalación](#-instalación)
-- [Flujo de Ejecución](#️-flujo-de-ejecución)
 - [Hardware y Entorno](#-hardware-y-entorno)
-- [Reproducibilidad](#-reproducibilidad)
-- [Consideraciones de Seguridad](#-consideraciones-de-seguridad)
-- [Limitaciones](#limitaciones)
-- [Citación](#citación)
-- [Autor](#autor)
-- [Licencia](#licencia)
-
 ---
 
 ## 🔬 Descripción General
