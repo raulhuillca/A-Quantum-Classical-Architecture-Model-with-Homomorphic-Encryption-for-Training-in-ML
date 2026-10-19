@@ -413,30 +413,6 @@ exportar_para_seal(synthetic_data_1M, "dataset_sintetico_1M.csv")
 
 El módulo QFT recibe un vector de características y ajusta su dimensión a la potencia de dos más cercana.
 
-La implementación conceptual es:
-
-```python
-def aplicar_qft_completa(data_vector):
-
-    n_qubits = int(np.ceil(np.log2(len(data_vector))))
-    target_len = 2**n_qubits
-
-    padded_data = np.pad(
-        data_vector,
-        (0, target_len - len(data_vector)),
-        'constant'
-    )
-
-    norm = np.linalg.norm(padded_data)
-
-    if norm == 0:
-        return np.zeros(target_len, dtype=complex)
-
-    # Preparación del estado cuántico
-    # seguido de la ejecución del circuito QFT
-```
-#### 🔒 Algoritmo
-
 **Algoritmo: Quantum Fourier Transform via Amplitude Encoding with GPU Batch Processing**
 <hr>
 
