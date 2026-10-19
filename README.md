@@ -2251,7 +2251,11 @@ print("[+] PROCESAMIENTO FINALIZADO.")
 
 La arquitectura soporta varios modelos de aprendizaje automático adaptados a las características numéricas del cálculo encriptado.
 
-#### 1. Regresión Lineal
+---
+
+### 📊 1. Regresión Lineal
+
+---
 
 El modelo de regresión lineal se define como:
 
