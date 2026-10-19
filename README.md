@@ -461,15 +461,6 @@ exportar_para_seal(synthetic_data_1M, "dataset_sintetico_1M.csv")
 
 </details>
 
-<details>
-<summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
-
-```python
-# Tu código Python aquí
-print("Hola Mundo")
-```
-
-</details>
 ### ⚛️ Transformada Cuántica de Fourier
 
 El módulo QFT recibe un vector de características y ajusta su dimensión a la potencia de dos más cercana.
@@ -544,6 +535,869 @@ $$
 
 <hr>
 
+<details>
+<summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
+
+```python
+import numpy as np
+import pandas as pd
+import os
+import time
+
+from qiskit import QuantumCircuit, transpile
+from qiskit_aer import AerSimulator
+from sklearn.preprocessing import StandardScaler
+
+
+# ================================================================
+# CONFIGURACIÓN
+# ================================================================
+
+BATCH_SIZE = 2000
+
+print()
+print("=" * 90)
+print("CONFIGURACIÓN DE QISKIT AER - GPU")
+print("=" * 90)
+
+print(f"[*] Tamaño de lote (batch): {BATCH_SIZE:,}")
+
+
+# ================================================================
+# CREAR SIMULADOR GPU
+# ================================================================
+
+sim = AerSimulator(
+    method="statevector",
+    device="GPU"
+)
+
+
+# ================================================================
+# VERIFICAR GPU
+# ================================================================
+
+dispositivos = sim.available_devices()
+
+print(f"[*] Dispositivos disponibles: {dispositivos}")
+print("[*] Dispositivo seleccionado : GPU")
+
+if "GPU" not in dispositivos:
+
+    raise RuntimeError(
+        "ERROR: La GPU no está disponible en Qiskit Aer."
+    )
+
+print("[+] GPU correctamente habilitada.")
+print("=" * 90)
+print()
+
+
+# ================================================================
+# FUNCIÓN: CREAR CIRCUITO QFT
+# ================================================================
+
+def crear_circuito_qft(data_vector):
+
+    # ------------------------------------------------------------
+    # Número de qubits
+    # ------------------------------------------------------------
+
+    n_qubits = int(
+        np.ceil(
+            np.log2(len(data_vector))
+        )
+    )
+
+    # ------------------------------------------------------------
+    # Tamaño potencia de 2
+    # ------------------------------------------------------------
+
+    target_len = 2 ** n_qubits
+
+    # ------------------------------------------------------------
+    # Padding
+    # ------------------------------------------------------------
+
+    padded_data = np.pad(
+        data_vector,
+        (0, target_len - len(data_vector)),
+        mode="constant"
+    )
+
+    # ------------------------------------------------------------
+    # Norma
+    # ------------------------------------------------------------
+
+    norm = np.linalg.norm(padded_data)
+
+    if norm == 0:
+
+        return None, target_len, norm
+
+    # ------------------------------------------------------------
+    # Crear circuito
+    # ------------------------------------------------------------
+
+    qc = QuantumCircuit(n_qubits)
+
+    # ------------------------------------------------------------
+    # Inicializar estado
+    # ------------------------------------------------------------
+
+    qc.initialize(
+        padded_data / norm,
+        range(n_qubits)
+    )
+
+    # ------------------------------------------------------------
+    # QFT
+    # ------------------------------------------------------------
+
+    for j in range(n_qubits):
+
+        for k in range(j):
+
+            qc.cp(
+                np.pi / float(
+                    2 ** (j - k)
+                ),
+                k,
+                j
+            )
+
+        qc.h(j)
+
+    # ------------------------------------------------------------
+    # Guardar statevector
+    # ------------------------------------------------------------
+
+    qc.save_statevector()
+
+    return qc, target_len, norm
+
+
+# ================================================================
+# FUNCIÓN: PROCESAR UN LOTE EN GPU
+# ================================================================
+
+def aplicar_qft_batch(X_batch):
+
+    resultados = []
+
+    for fila in X_batch:
+
+        qc, target_len, norm = crear_circuito_qft(
+            fila
+        )
+
+        # --------------------------------------------------------
+        # Caso vector cero
+        # --------------------------------------------------------
+
+        if qc is None:
+
+            resultados.append(
+                np.zeros(
+                    len(fila),
+                    dtype=float
+                )
+            )
+
+            continue
+
+        resultados.append(
+            (
+                qc,
+                norm,
+                len(fila)
+            )
+        )
+
+
+    # ============================================================
+    # SEPARAR CIRCUITOS VÁLIDOS
+    # ============================================================
+
+    circuitos = [
+        elemento[0]
+        for elemento in resultados
+        if isinstance(elemento, tuple)
+    ]
+
+
+    # ============================================================
+    # TRANSPILAR TODO EL LOTE
+    # ============================================================
+
+    if circuitos:
+
+        circuitos_transpilados = transpile(
+            circuitos,
+            sim,
+            optimization_level=0
+        )
+
+        # --------------------------------------------------------
+        # EJECUTAR TODO EL LOTE EN GPU
+        # --------------------------------------------------------
+
+        result = sim.run(
+            circuitos_transpilados
+        ).result()
+
+    else:
+
+        result = None
+
+
+    # ============================================================
+    # RECUPERAR RESULTADOS
+    # ============================================================
+
+    indice_resultado = 0
+
+    salida = []
+
+
+    for elemento in resultados:
+
+        # --------------------------------------------------------
+        # Vector cero
+        # --------------------------------------------------------
+
+        if not isinstance(elemento, tuple):
+
+            salida.append(elemento)
+
+            continue
+
+
+        qc, norm, longitud_original = elemento
+
+
+        # --------------------------------------------------------
+        # Obtener statevector
+        # --------------------------------------------------------
+
+        statevector = (
+            result
+            .get_statevector(
+                indice_resultado
+            )
+            .data
+        )
+
+
+        # --------------------------------------------------------
+        # Recuperar escala original
+        # --------------------------------------------------------
+
+        statevector = (
+            statevector * norm
+        )
+
+
+        # --------------------------------------------------------
+        # Parte real
+        # --------------------------------------------------------
+
+        frecuencia = np.real(
+            statevector
+        )[:longitud_original]
+
+
+        salida.append(
+            frecuencia
+        )
+
+
+        indice_resultado += 1
+
+
+    return np.asarray(
+        salida,
+        dtype=float
+    )
+
+
+# ================================================================
+# DATASETS
+# ================================================================
+
+datasets = [
+
+    {
+        "nombre": "1K",
+        "entrada":
+            "Datos_sinteticos/dataset_sintetico_1k.csv",
+        "salida":
+            "Datos_en_el_dominio_de_frecuencias/dataset_qft_1K.csv"
+    }
+    #,
+    # {
+    #     "nombre": "10K",
+    #     "entrada":
+    #         "Datos_sinteticos/dataset_sintetico_10k.csv",
+    #     "salida":
+    #         "Datos_en_el_dominio_de_frecuencias/dataset_qft_10K.csv"
+    # }
+
+    # {
+    #     "nombre": "100K",
+    #     "entrada":
+    #         "Datos_sinteticos/dataset_sintetico_100k.csv",
+    #     "salida":
+    #         "Datos_en_el_dominio_de_frecuencias/dataset_qft_100K.csv"
+    # }
+
+    # {
+    #     "nombre": "500K",
+    #     "entrada":
+    #         "Datos_sinteticos/dataset_sintetico_500k.csv",
+    #     "salida":
+    #         "Datos_en_el_dominio_de_frecuencias/dataset_qft_500K.csv"
+    # },
+
+    # {
+    #     "nombre": "1M",
+    #     "entrada":
+    #         "Datos_sinteticos/dataset_sintetico_1M.csv",
+    #     "salida":
+    #         "Datos_en_el_dominio_de_frecuencias/dataset_qft_1M.csv"
+    # }
+]
+
+
+# ================================================================
+# DIRECTORIO DE SALIDA
+# ================================================================
+
+os.makedirs(
+    "Datos_en_el_dominio_de_frecuencias",
+    exist_ok=True
+)
+
+
+# ================================================================
+# RESULTADOS
+# ================================================================
+
+resultados_tiempos = []
+
+
+# ================================================================
+# PROCESAMIENTO
+# ================================================================
+
+for dataset in datasets:
+
+    nombre = dataset["nombre"]
+
+    archivo_entrada = dataset["entrada"]
+
+    archivo_salida = dataset["salida"]
+
+
+    print()
+    print()
+    print("=" * 90)
+    print(f"PROCESANDO DATASET: {nombre}")
+    print("=" * 90)
+
+
+    inicio_total = time.perf_counter()
+
+
+    # ============================================================
+    # VERIFICAR ARCHIVO
+    # ============================================================
+
+    if not os.path.exists(
+        archivo_entrada
+    ):
+
+        print(
+            f"[!] No existe el archivo: "
+            f"{archivo_entrada}"
+        )
+
+        continue
+
+
+    # ============================================================
+    # ELIMINAR SALIDA ANTERIOR
+    # ============================================================
+
+    if os.path.exists(
+        archivo_salida
+    ):
+
+        os.remove(
+            archivo_salida
+        )
+
+        print(
+            f"[*] Archivo anterior eliminado: "
+            f"{archivo_salida}"
+        )
+
+
+    # ============================================================
+    # LECTURA
+    # ============================================================
+
+    inicio_lectura = time.perf_counter()
+
+    print(
+        f"[*] Leyendo: "
+        f"{archivo_entrada}"
+    )
+
+    df = pd.read_csv(
+        archivo_entrada
+    )
+
+    fin_lectura = time.perf_counter()
+
+    tiempo_lectura = (
+        fin_lectura -
+        inicio_lectura
+    )
+
+    numero_registros = len(df)
+
+    print(
+        f"[*] Registros: "
+        f"{numero_registros:,}"
+    )
+
+
+    # ============================================================
+    # NORMALIZACIÓN
+    # ============================================================
+
+    inicio_normalizacion = time.perf_counter()
+
+
+    scaler_X = StandardScaler()
+
+
+    X_crudos = scaler_X.fit_transform(
+        df[
+            [
+                "temp_ambiente",
+                "num_personas",
+                "eficiencia_maquina"
+            ]
+        ]
+    )
+
+
+    # ============================================================
+    # NORMALIZACIÓN DEL TARGET
+    # ============================================================
+
+    scaler_Y = StandardScaler()
+
+
+    Y_target_scaled = scaler_Y.fit_transform(
+        df[
+            [
+                "consumo_kwh"
+            ]
+        ]
+    ).flatten()
+
+
+    fin_normalizacion = time.perf_counter()
+
+
+    tiempo_normalizacion = (
+        fin_normalizacion -
+        inicio_normalizacion
+    )
+
+
+    # ============================================================
+    # QFT GPU POR LOTES
+    # ============================================================
+
+    print()
+    print(
+        "[*] Aplicando QFT utilizando GPU..."
+    )
+
+
+    inicio_qft = time.perf_counter()
+
+
+    numero_batches = int(
+        np.ceil(
+            numero_registros /
+            BATCH_SIZE
+        )
+    )
+
+
+    resultados_batches = []
+
+
+    for inicio in range(
+        0,
+        numero_registros,
+        BATCH_SIZE
+    ):
+
+        fin = min(
+            inicio + BATCH_SIZE,
+            numero_registros
+        )
+
+
+        X_batch = X_crudos[
+            inicio:fin
+        ]
+
+
+        numero_batch_actual = (
+            inicio // BATCH_SIZE
+        ) + 1
+
+
+        print(
+            f"    Batch "
+            f"{numero_batch_actual:,}/"
+            f"{numero_batches:,} "
+            f"-> registros "
+            f"{inicio + 1:,}-"
+            f"{fin:,}"
+        )
+
+
+        resultado_batch = aplicar_qft_batch(
+            X_batch
+        )
+
+
+        resultados_batches.append(
+            resultado_batch
+        )
+
+
+    # ============================================================
+    # UNIR TODOS LOS BATCHES
+    # ============================================================
+
+    X_qft = np.vstack(
+        resultados_batches
+    )
+
+
+    fin_qft = time.perf_counter()
+
+
+    tiempo_qft = (
+        fin_qft -
+        inicio_qft
+    )
+
+
+    print()
+    print(
+        f"[+] QFT GPU finalizada: "
+        f"{tiempo_qft:.4f} segundos"
+    )
+
+
+    # ============================================================
+    # POSTPROCESAMIENTO
+    # ============================================================
+
+    inicio_postproceso = time.perf_counter()
+
+
+    X_qft_bias = np.c_[
+        np.ones(
+            len(X_qft)
+        ),
+        X_qft
+    ]
+
+
+    # ============================================================
+    # DATAFRAME FINAL
+    # ============================================================
+
+    df_qft = pd.DataFrame(
+        X_qft_bias,
+        columns=[
+            "bias",
+            "qft_f1",
+            "qft_f2",
+            "qft_f3"
+        ]
+    )
+
+
+    df_qft[
+        "target_scaled"
+    ] = Y_target_scaled
+
+
+    df_qft[
+        "y_mean"
+    ] = scaler_Y.mean_[0]
+
+
+    df_qft[
+        "y_scale"
+    ] = scaler_Y.scale_[0]
+
+
+    fin_postproceso = time.perf_counter()
+
+
+    tiempo_postproceso = (
+        fin_postproceso -
+        inicio_postproceso
+    )
+
+
+    # ============================================================
+    # GUARDAR CSV
+    # ============================================================
+
+    inicio_guardado = time.perf_counter()
+
+
+    df_qft.to_csv(
+        archivo_salida,
+        index=False,
+        float_format="%.10f"
+    )
+
+
+    fin_guardado = time.perf_counter()
+
+
+    tiempo_guardado = (
+        fin_guardado -
+        inicio_guardado
+    )
+
+
+    # ============================================================
+    # TIEMPO TOTAL
+    # ============================================================
+
+    fin_total = time.perf_counter()
+
+
+    tiempo_total = (
+        fin_total -
+        inicio_total
+    )
+
+
+    # ============================================================
+    # NÚMERO DE QUBITS
+    # ============================================================
+
+    n_qubits = int(
+        np.ceil(
+            np.log2(
+                X_crudos.shape[1]
+            )
+        )
+    )
+
+
+    # ============================================================
+    # GUARDAR RESULTADOS
+    # ============================================================
+
+    resultados_tiempos.append(
+        {
+
+            "Dataset":
+                nombre,
+
+            "Registros":
+                numero_registros,
+
+            "Qubits":
+                n_qubits,
+
+            "Lectura (s)":
+                tiempo_lectura,
+
+            "Normalización (s)":
+                tiempo_normalizacion,
+
+            "QFT GPU (s)":
+                tiempo_qft,
+
+            "Postproceso (s)":
+                tiempo_postproceso,
+
+            "Guardado (s)":
+                tiempo_guardado,
+
+            "Total (s)":
+                tiempo_total,
+
+            "Total (min)":
+                tiempo_total / 60
+        }
+    )
+
+
+    # ============================================================
+    # RESULTADO DEL DATASET
+    # ============================================================
+
+    print()
+    print(
+        f"[+] Dataset {nombre} completado."
+    )
+
+    print(
+        f"[+] Archivo: "
+        f"{archivo_salida}"
+    )
+
+    print(
+        f"[+] Tiempo QFT GPU: "
+        f"{tiempo_qft:.4f} segundos"
+    )
+
+    print(
+        f"[+] Tiempo total: "
+        f"{tiempo_total:.4f} segundos"
+    )
+
+
+# ================================================================
+# CUADRO FINAL
+# ================================================================
+
+print()
+print()
+print("=" * 130)
+print("RESUMEN FINAL DE EJECUCIÓN - QFT EN GPU")
+print("=" * 130)
+
+
+if resultados_tiempos:
+
+    df_tiempos = pd.DataFrame(
+        resultados_tiempos
+    )
+
+
+    columnas = [
+        "Dataset",
+        "Registros",
+        "Qubits",
+        "Lectura (s)",
+        "Normalización (s)",
+        "QFT GPU (s)",
+        "Postproceso (s)",
+        "Guardado (s)",
+        "Total (s)",
+        "Total (min)"
+    ]
+
+
+    print(
+        df_tiempos[
+            columnas
+        ].to_string(
+            index=False,
+            formatters={
+
+                "Lectura (s)":
+                    "{:.4f}".format,
+
+                "Normalización (s)":
+                    "{:.4f}".format,
+
+                "QFT GPU (s)":
+                    "{:.4f}".format,
+
+                "Postproceso (s)":
+                    "{:.4f}".format,
+
+                "Guardado (s)":
+                    "{:.4f}".format,
+
+                "Total (s)":
+                    "{:.4f}".format,
+
+                "Total (min)":
+                    "{:.4f}".format
+            }
+        )
+    )
+
+
+# ================================================================
+# TIEMPOS GLOBALES
+# ================================================================
+
+if resultados_tiempos:
+
+    tiempo_total_global = sum(
+        r["Total (s)"]
+        for r in resultados_tiempos
+    )
+
+
+    tiempo_total_qft = sum(
+        r["QFT GPU (s)"]
+        for r in resultados_tiempos
+    )
+
+
+    print()
+    print("-" * 130)
+
+
+    print(
+        f"Tiempo total QFT en GPU: "
+        f"{tiempo_total_qft:.4f} segundos"
+    )
+
+
+    print(
+        f"Tiempo total procesamiento: "
+        f"{tiempo_total_global:.4f} segundos"
+    )
+
+
+    print(
+        f"Tiempo total procesamiento: "
+        f"{tiempo_total_global / 60:.4f} minutos"
+    )
+
+
+print("=" * 130)
+print("PROCESAMIENTO FINALIZADO")
+print("=" * 130)
+```
+
+</details>
+
+<details>
+<summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
+
+```python
+# Tu código Python aquí
+print("Hola Mundo")
+```
+
+</details>
 ### 🔐 Canal de Encriptación Homomórfica
 
 El módulo criptográfico se implementa utilizando TenSEAL, que proporciona integraciones en Python para la encriptación homomórfica basada en Microsoft SEAL.
