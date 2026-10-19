@@ -9137,7 +9137,7 @@ Los experimentos se llevaron a cabo utilizando el siguiente entorno computaciona
 - **Stack de Software:** Python 3.12, Qiskit 1.1.1, Qiskit Aer 0.15.1, TenSEAL 0.3.16, Microsoft SEAL, NumPy, Pandas, Scikit-learn, Matplotlib
 
 
-# 🏗️ Arquitectura del Sistema (Diagrama Generado)
+# 🏗️ Arquitectura del Sistema
 
 ```mermaid
 flowchart TD
@@ -9147,52 +9147,3 @@ flowchart TD
     op3 --> op4[FASE 4: Aprendizaje Automático <br/> RL, Regresión Logística, LS-SVM, MLP]
     op4 --> e([Evaluación])
 ```
-
-# ⚙️ Flujo Avanzado: Arquitectura Cuántica-Clásica y Entrenamiento Cifrado
-
-```mermaid
-flowchart TD
-    st([Inicio: Conjunto de Datos Sintético]) --> fase1[FASE 1: Preprocesamiento Clásico <br/> Normalización]
-    fase1 --> fase2[[FASE 2: Ejecución QFT <br/> Representación de Frecuencia]]
-    fase2 --> fase3[FASE 3: Generación de Contexto y Encriptación CKKS]
-    fase3 --> init_ml[Inicializar Pesos del Modelo <br/> RL, LS-SVM, MLP]
-    init_ml --> cond_epochs{¿Épocas < Límite <br/> Ej. 150?}
-    
-    cond_epochs -- Sí --> fase4_fwd[FASE 4: Operaciones Homomórficas <br/> Sumas y Multiplicaciones]
-    fase4_fwd --> fase4_aprox[Aproximación Polinomial <br/> Ej. Maclaurin de 3er grado]
-    fase4_aprox --> fase4_bwd[Actualización de Pesos Encriptados]
-    fase4_bwd --> cond_epochs
-    
-    cond_epochs -- No --> desencriptar[[Desencriptación Controlada <br/> Texto Plano Aproximado]]
-    desencriptar --> evaluacion[/Evaluación de Métricas <br/> MSE, R², Accuracy, F1/]
-    evaluacion --> e([Fin: Resultados Experimentales])
-```
-
-# 🔄 Diagrama de Secuencia: Interacción Cuántica-Criptográfica
-
-```mermaid
-sequenceDiagram
-    participant P as Preprocesamiento Clásico
-    participant Q as Módulo Cuántico (QFT)
-    participant C as Módulo Criptográfico (CKKS)
-    participant M as Modelo Machine Learning
-
-    P->>Q: Envía características normalizadas
-    Note right of Q: Ajuste de dimensión<br/>Codificación de amplitud<br/>Ejecución QFT
-    Q-->>P: Retorna representación de frecuencia (Compleja)
-    
-    P->>C: Envía vectores QFT
-    Note right of C: Configuración BKZ<br/>Ranuras CKKS: 4096<br/>Generación de texto cifrado
-    
-    C->>M: Envía Vectores Encriptados
-    Note right of M: Aproximación Polinomial<br/>Optimizador Basado en Gradiente
-    
-    M->>M: Épocas de Entrenamiento (Operaciones Homomórficas)
-    M-->>P: Modelo Encriptado (Pesos Ajustados)
-    
-    Note left of P: Desencriptación Controlada<br/>Cálculo de MSE, R², Accuracy
-```
-
-<img width="1299" height="697" alt="Cifrado Homomórfico CKKS de Amplitudes Cuánticas" src="https://github.com/user-attachments/assets/146ec4fe-58c6-4ac4-9449-c1a5b1be69e0" />
-
-
