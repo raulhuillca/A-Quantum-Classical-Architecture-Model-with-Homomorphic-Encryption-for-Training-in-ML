@@ -6429,7 +6429,11 @@ print("=" * 80)
 ##### 2.3. Resultados: Tablas
 ##### 2.4. Resultados: Figuras
 
-#### 3. LS-SVM
+---
+
+### ⚖️ 3. LS-SVM
+
+---
 
 La Máquina de Vectores de Soporte de Mínimos Cuadrados (LS-SVM) se formula utilizando un objetivo de optimización regularizado. La implementación utiliza una formulación lineal primal con:
 
