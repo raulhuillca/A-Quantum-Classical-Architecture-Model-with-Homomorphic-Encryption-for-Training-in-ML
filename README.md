@@ -173,7 +173,7 @@ La cadena de procesamiento conceptual es:
 
 ## 💻 Algoritmos, Código Fuente y Resultados
 
-#### 1. Generación de Datos Sintéticos
+### 🧬 1.-Generación de Datos Sintéticos
 ##### El Algoritmo (TVAE Synthetic Data Generation)
 
 **Algoritmo: Massive Synthetic Data Generation via TVAE and Batch Processing for CKKS Homomorphic Encryption**
@@ -411,7 +411,7 @@ exportar_para_seal(synthetic_data_1M, "dataset_sintetico_1M.csv")
 
 </details>
 
-### ⚛️ Transformada Cuántica de Fourier
+### ⚛️ 2.-Transformada Cuántica de Fourier
 
 El módulo QFT recibe un vector de características y ajusta su dimensión a la potencia de dos más cercana.
 
