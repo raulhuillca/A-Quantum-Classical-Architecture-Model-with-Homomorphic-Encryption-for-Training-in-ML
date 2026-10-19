@@ -4604,11 +4604,1927 @@ $$
 <summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
 
 ```python
-# Tu código Python aquí
-print("Hola Mundo")
+import tenseal as ts
+import numpy as np
+import pandas as pd
+import pickle
+import os
+import time
+import math
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+
+
+
+# =====================================================================
+# FUNCIÓN PARA MOSTRAR TABLAS EN CONSOLA
+# =====================================================================
+
+def mostrar_tabla(titulo, descripcion, dataframe):
+
+    print()
+    print("=" * 100)
+    print(titulo)
+    print("=" * 100)
+
+    print()
+    print("Descripción:")
+    print(descripcion)
+
+    print()
+    print(dataframe.to_string(index=False))
+
+    print()
+    print("-" * 100)
+
+
+# =====================================================================
+# 1. CONFIGURACIÓN
+# =====================================================================
+
+# Seleccionar dataset
+DATASET = "500K"
+
+archivo_contexto = "contexto_ckks.bytes"
+
+archivo_datos_cifrados = (
+    f"Datos_cifrados_homomorficamente(ckks)/"
+    f"datos_cifrados_ckks_{DATASET}.pkl"
+)
+
+# Parámetros del entrenamiento
+LR = 0.05
+EPOCHS = 150
+
+# Inicialización de los pesos
+PESO_INICIAL = 0.01
+
+# Número de características
+FEATURES = [
+    "bias",
+    "qft_f1",
+    "qft_f2",
+    "qft_f3"
+]
+
+N_FEATURES = len(FEATURES)
+
+# Capacidad CKKS
+POLY_MODULUS_DEGREE = 8192
+SLOTS_CKKS = POLY_MODULUS_DEGREE // 2
+
+
+# =====================================================================
+# 2. CARGAR CONTEXTO CKKS
+# =====================================================================
+
+print("=" * 80)
+print("ENTRENAMIENTO HÍBRIDO CON CKKS")
+print("=" * 80)
+
+print()
+print("[1/6] Cargando contexto CKKS...")
+
+with open(archivo_contexto, "rb") as f:
+    context = ts.context_from(f.read())
+
+print("[+] Contexto CKKS cargado correctamente.")
+
+
+# =====================================================================
+# 3. CARGAR DATASET CIFRADO
+# =====================================================================
+
+print()
+print("[2/6] Cargando datos cifrados...")
+
+if not os.path.exists(archivo_datos_cifrados):
+
+    raise FileNotFoundError(
+        f"No existe el archivo:\n{archivo_datos_cifrados}"
+    )
+
+with open(archivo_datos_cifrados, "rb") as f:
+
+    datos = pickle.load(f)
+
+
+numero_registros = datos["numero_registros"]
+
+numero_chunks = datos["numero_chunks"]
+
+
+Y_target_scaled = np.asarray(
+    datos["Y_target_scaled"],
+    dtype=np.float64
+)
+
+
+y_mean = datos["y_mean"]
+
+y_scale = datos["y_scale"]
+
+
+print(
+    f"[+] Dataset cargado correctamente: {DATASET}"
+)
+
+
+# =====================================================================
+# TABLA 1
+# INFORMACIÓN DEL DATASET CIFRADO
+# =====================================================================
+
+tabla_dataset = pd.DataFrame({
+
+    "Característica": [
+
+        "Dataset",
+
+        "Número de registros",
+
+        "Número de características",
+
+        "Slots CKKS disponibles",
+
+        "Número de chunks",
+
+        "Esquema criptográfico"
+
+    ],
+
+    "Valor": [
+
+        DATASET,
+
+        f"{numero_registros:,}",
+
+        N_FEATURES,
+
+        f"{SLOTS_CKKS:,}",
+
+        numero_chunks,
+
+        "CKKS"
+
+    ]
+
+})
+
+
+mostrar_tabla(
+
+    "TABLA 1. INFORMACIÓN DEL DATASET CIFRADO",
+
+    "Presenta las características principales del conjunto de datos "
+    "cifrado utilizado como entrada para el entrenamiento del modelo "
+    "de regresión lineal bajo el esquema homomórfico CKKS.",
+
+    tabla_dataset
+
+)
+
+
+# =====================================================================
+# 4. RECONSTRUIR LOS CIPHERTEXTS
+# =====================================================================
+
+print()
+print("[3/6] Reconstruyendo ciphertexts CKKS...")
+
+X_cifrado = {}
+
+
+for feature in FEATURES:
+
+    X_cifrado[feature] = []
+
+    chunks = datos["X_cifrado_bytes"][feature]
+
+
+    print(
+        f"    {feature}: "
+        f"{len(chunks)} chunks"
+    )
+
+
+    for chunk_bytes in chunks:
+
+        vector_cifrado = ts.ckks_vector_from(
+
+            context,
+
+            chunk_bytes
+
+        )
+
+
+        X_cifrado[feature].append(
+
+            vector_cifrado
+
+        )
+
+
+print(
+    "[+] Ciphertexts reconstruidos correctamente."
+)
+
+
+# =====================================================================
+# 5. RECONSTRUIR X EN CLARO PARA EL CÁLCULO DEL GRADIENTE
+# =====================================================================
+#
+# IMPORTANTE:
+#
+# Esta sección hace que el procedimiento sea HÍBRIDO.
+#
+# Los datos se almacenan y las operaciones de predicción se realizan
+# sobre ciphertexts, pero el gradiente se calcula después de recuperar
+# los valores de X.
+#
+# Por tanto, este algoritmo NO debe denominarse entrenamiento FHE
+# completamente ciego.
+#
+# =====================================================================
+
+print()
+print(
+    "[4/6] Preparando datos para el cálculo del gradiente..."
+)
+
+
+X_claro_columnas = []
+
+
+for feature in FEATURES:
+
+    valores_feature = []
+
+
+    for chunk in X_cifrado[feature]:
+
+        valores_chunk = np.asarray(
+
+            chunk.decrypt(),
+
+            dtype=np.float64
+
+        )
+
+
+        valores_feature.extend(
+
+            valores_chunk
+
+        )
+
+
+    X_claro_columnas.append(
+
+        np.asarray(
+
+            valores_feature,
+
+            dtype=np.float64
+
+        )
+
+    )
+
+
+X_claro_local = np.column_stack(
+
+    X_claro_columnas
+
+)
+
+
+print(
+
+    f"[+] Matriz X reconstruida: "
+
+    f"{X_claro_local.shape}"
+
+)
+
+
+# =====================================================================
+# PREPARAR VARIABLE OBJETIVO PARA REGRESIÓN LOGÍSTICA
+# =====================================================================
+#
+# consumo_kwh es continua; por ello, para regresión logística se
+# convierte en dos clases usando la mediana del mismo dataset:
+#   0 = consumo <= mediana
+#   1 = consumo > mediana
+# =====================================================================
+
+archivo_datos_originales = (
+    f"Datos_sinteticos/dataset_sintetico_{DATASET.lower()}.csv"
+)
+
+df_objetivo = pd.read_csv(archivo_datos_originales)
+
+y_original = df_objetivo["consumo_kwh"].to_numpy(dtype=np.float64)
+
+if len(y_original) != numero_registros:
+    raise ValueError(
+        f"El CSV original ({len(y_original)} registros) no coincide "
+        f"con el dataset cifrado ({numero_registros} registros)."
+    )
+
+umbral_consumo = np.median(y_original)
+
+Y_target_clase = (
+    y_original > umbral_consumo
+).astype(np.float64)
+
+print()
+print("[+] Variable objetivo preparada para regresión logística.")
+print(f"    Umbral de clasificación: {umbral_consumo:.10f} kWh")
+print("    Clase 0: consumo <= umbral")
+print("    Clase 1: consumo > umbral")
+print()
+
+# =====================================================================
+# 6. CREAR PESOS CIFRADOS POR CHUNK
+# =====================================================================
+#
+# En lugar de crear:
+#
+#     ts.ckks_vector(context, [gradiente] * n_muestras)
+#
+# se mantiene un vector de pesos por cada chunk.
+#
+# Cada posición del vector contiene inicialmente el mismo peso.
+#
+# Ejemplo para 10K:
+#
+#     chunk 1 -> 4096 pesos
+#     chunk 2 -> 4096 pesos
+#     chunk 3 -> 1808 pesos
+#
+# =====================================================================
+
+print()
+print("[5/6] Inicializando pesos cifrados...")
+
+
+w = {}
+
+
+for feature in FEATURES:
+
+    w[feature] = []
+
+
+    for c in range(numero_chunks):
+
+        inicio = c * SLOTS_CKKS
+
+
+        fin = min(
+
+            inicio + SLOTS_CKKS,
+
+            numero_registros
+
+        )
+
+
+        longitud_chunk = fin - inicio
+
+
+        peso_chunk = ts.ckks_vector(
+
+            context,
+
+            [PESO_INICIAL] * longitud_chunk
+
+        )
+
+
+        w[feature].append(
+
+            peso_chunk
+
+        )
+
+
+print(
+    "[+] Pesos cifrados inicializados."
+)
+
+
+# =====================================================================
+# 7. ENTRENAMIENTO
+# =====================================================================
+
+print()
+print("=" * 80)
+print("INICIANDO ENTRENAMIENTO")
+print("=" * 80)
+
+print(f"Learning rate : {LR}")
+print(f"Épocas        : {EPOCHS}")
+
+historial_mse = []
+historial_rmse = []
+historial_loss = []
+tabla_entrenamiento = []
+
+tiempo_inicio_entrenamiento = time.perf_counter()
+
+for epoch in range(EPOCHS):
+
+    probabilidades = []
+
+    for c in range(numero_chunks):
+
+        # Predictor lineal
+        z_enc = X_cifrado["bias"][c].mul(w["bias"][c])
+
+        termino = X_cifrado["qft_f1"][c].mul(w["qft_f1"][c])
+        z_enc = z_enc + termino
+
+        termino = X_cifrado["qft_f2"][c].mul(w["qft_f2"][c])
+        z_enc = z_enc + termino
+
+        termino = X_cifrado["qft_f3"][c].mul(w["qft_f3"][c])
+        z_enc = z_enc + termino
+
+        # ---------------------------------------------------------------
+        # Sigmoide aproximada mediante Maclaurin de grado 3:
+        #     sigma(z) ≈ 0.5 + z/4 - z^3/48
+        #
+        # IMPORTANTE:
+        # No se realizan aquí dos multiplicaciones homomórficas
+        # consecutivas (z*z y z^2*z), porque con la cadena de módulos
+        # CKKS utilizada ([60,40,40,60]) la segunda multiplicación puede
+        # producir:
+        #     ValueError: scale out of bounds
+        #
+        # Como este procedimiento es HÍBRIDO, se descifra únicamente
+        # el predictor lineal z de cada chunk y se aplica la aproximación
+        # cúbica en claro. De esta manera se conserva el cálculo del
+        # predictor lineal sobre ciphertexts y se evita consumir niveles
+        # adicionales de la cadena CKKS.
+        # ---------------------------------------------------------------
+
+        z_chunk = np.asarray(
+            z_enc.decrypt(),
+            dtype=np.float64
+        )
+
+        p_chunk = (
+            0.5
+            + (z_chunk / 4.0)
+            - (z_chunk ** 3 / 48.0)
+        )
+
+        probabilidades.extend(p_chunk)
+
+    Y_prob = np.asarray(probabilidades, dtype=np.float64)
+
+    if not np.all(np.isfinite(Y_prob)):
+        raise RuntimeError("La probabilidad contiene valores NaN o Inf.")
+
+    Y_prob_eval = np.clip(Y_prob, 1e-7, 1.0 - 1e-7)
+
+    # Gradiente de regresión logística
+    error = Y_prob_eval - Y_target_clase
+
+    gradientes = (
+        X_claro_local.T @ error
+    ) / numero_registros
+
+    if not np.all(np.isfinite(gradientes)):
+        raise RuntimeError(
+            f"Gradiente inválido en época {epoch + 1}: {gradientes}"
+        )
+
+    for j, feature in enumerate(FEATURES):
+
+        delta = LR * gradientes[j]
+
+        if not np.isfinite(delta):
+            raise RuntimeError(
+                f"Delta inválido para {feature}: {delta}"
+            )
+
+        for c in range(numero_chunks):
+            w[feature][c] = w[feature][c].sub(delta)
+
+    # Evaluación durante el entrenamiento
+    log_loss = -np.mean(
+        Y_target_clase * np.log(Y_prob_eval)
+        +
+        (1.0 - Y_target_clase) * np.log(1.0 - Y_prob_eval)
+    )
+
+    Y_pred_clase = (Y_prob_eval >= 0.5).astype(int)
+
+    accuracy = accuracy_score(
+        Y_target_clase,
+        Y_pred_clase
+    )
+
+    # Se conservan MSE y RMSE como métricas auxiliares sobre
+    # la codificación probabilística 0/1.
+    mse = mean_squared_error(
+        Y_target_clase,
+        Y_prob_eval
+    )
+
+    rmse = np.sqrt(mse)
+
+    historial_loss.append(log_loss)
+    historial_mse.append(mse)
+    historial_rmse.append(rmse)
+
+    tabla_entrenamiento.append({
+        "Época": epoch + 1,
+        "MSE": mse,
+        "RMSE": rmse,
+        "Log-Loss": log_loss,
+        "Accuracy": accuracy
+    })
+
+tiempo_fin_entrenamiento = time.perf_counter()
+
+tiempo_entrenamiento = (
+    tiempo_fin_entrenamiento -
+    tiempo_inicio_entrenamiento
+)
+
+# =====================================================================
+# TABLA 2
+# HISTORIAL COMPLETO DEL ENTRENAMIENTO
+# =====================================================================
+
+df_entrenamiento = pd.DataFrame(
+
+    tabla_entrenamiento
+
+)
+
+
+mostrar_tabla(
+
+    "TABLA 2. EVOLUCIÓN DEL ENTRENAMIENTO DEL MODELO LOGÍSTICO CKKS",
+
+    "Presenta la evolución del MSE, RMSE, Log-Loss y Accuracy durante "
+    "todas las épocas del entrenamiento. El Log-Loss permite evaluar "
+    "la calidad probabilística de la clasificación y Accuracy muestra "
+    "la proporción de clasificaciones correctas. Esta tabla permite "
+    "analizar la convergencia del modelo.",
+
+    df_entrenamiento
+
+)
+
+
+# =====================================================================
+# 8. DESCIFRAR PESOS FINALES
+# =====================================================================
+
+print()
+print("=" * 80)
+print("DESCIFRANDO PESOS FINALES")
+print("=" * 80)
+
+
+pesos_finales = []
+
+
+for feature in FEATURES:
+
+    pesos_chunks = []
+
+
+    for c in range(numero_chunks):
+
+        valores = np.asarray(
+
+            w[feature][c].decrypt(),
+
+            dtype=np.float64
+
+        )
+
+
+        pesos_chunks.extend(
+
+            valores
+
+        )
+
+
+    peso_final = np.mean(
+
+        pesos_chunks
+
+    )
+
+
+    pesos_finales.append(
+
+        peso_final
+
+    )
+
+
+pesos_finales = np.asarray(
+
+    pesos_finales,
+
+    dtype=np.float64
+
+)
+
+
+# =====================================================================
+# 9. PREDICCIÓN FINAL
+# =====================================================================
+
+# Probabilidad final usando la función logística exacta para evaluación.
+# El entrenamiento CKKS utiliza la aproximación de Maclaurin de grado 3.
+Y_logit_final = X_claro_local @ pesos_finales
+
+Y_prob_final = 1.0 / (
+    1.0 + np.exp(-np.clip(Y_logit_final, -50, 50))
+)
+
+Y_prob_final = np.clip(
+    Y_prob_final,
+    1e-7,
+    1.0 - 1e-7
+)
+
+Y_pred_clase_final = (
+    Y_prob_final >= 0.5
+).astype(int)
+
+# =====================================================================
+# 10. MÉTRICAS FINALES
+# =====================================================================
+
+accuracy_final = accuracy_score(
+    Y_target_clase,
+    Y_pred_clase_final
+)
+
+precision_final = precision_score(
+    Y_target_clase,
+    Y_pred_clase_final,
+    zero_division=0
+)
+
+recall_final = recall_score(
+    Y_target_clase,
+    Y_pred_clase_final,
+    zero_division=0
+)
+
+f1_final = f1_score(
+    Y_target_clase,
+    Y_pred_clase_final,
+    zero_division=0
+)
+
+auc_final = roc_auc_score(
+    Y_target_clase,
+    Y_prob_final
+)
+
+log_loss_final = -np.mean(
+    Y_target_clase * np.log(Y_prob_final)
+    +
+    (1.0 - Y_target_clase) * np.log(1.0 - Y_prob_final)
+)
+
+# Métricas de error auxiliares sobre probabilidades 0/1.
+mse_final = mean_squared_error(
+    Y_target_clase,
+    Y_prob_final
+)
+
+rmse_final = np.sqrt(mse_final)
+
+mae_final = mean_absolute_error(
+    Y_target_clase,
+    Y_prob_final
+)
+
+r2_final = r2_score(
+    Y_target_clase,
+    Y_prob_final
+)
+
+
+# ============================================================
+# MÓDULO ADICIONAL: ENTRENAMIENTO DEL MODELO CLÁSICO
+# ============================================================
+
+print()
+print("=" * 100)
+print("MÓDULO ADICIONAL: ENTRENAMIENTO DEL MODELO CLÁSICO")
+print("=" * 100)
+print()
+
+archivo_datos_clasicos = (
+    f"Datos_sinteticos/dataset_sintetico_{DATASET.lower()}.csv"
+)
+
+print(f"Archivo de datos originales: {archivo_datos_clasicos}")
+print()
+
+df_clasico = pd.read_csv(archivo_datos_clasicos)
+
+print(f"Registros cargados: {len(df_clasico):,}")
+print("Variables utilizadas:")
+print("  - temp_ambiente")
+print("  - num_personas")
+print("  - eficiencia_maquina")
+print("Variable objetivo:")
+print("  - consumo_kwh")
+print()
+
+X_clasico = df_clasico[
+    [
+        "temp_ambiente",
+        "num_personas",
+        "eficiencia_maquina"
+    ]
+].values
+
+y_clasico_original = df_clasico[
+    "consumo_kwh"
+].values
+
+y_clasico = (
+    y_clasico_original > umbral_consumo
+).astype(int)
+
+tiempo_inicio_clasico = time.perf_counter()
+
+modelo_clasico = LogisticRegression(
+    max_iter=1000
+)
+
+modelo_clasico.fit(
+    X_clasico,
+    y_clasico
+)
+
+y_prob_clasico = modelo_clasico.predict_proba(
+    X_clasico
+)[:, 1]
+
+y_pred_clasico = (
+    y_prob_clasico >= 0.5
+).astype(int)
+
+tiempo_fin_clasico = time.perf_counter()
+
+tiempo_entrenamiento_clasico = (
+    tiempo_fin_clasico -
+    tiempo_inicio_clasico
+)
+
+accuracy_clasico = accuracy_score(y_clasico, y_pred_clasico)
+precision_clasico = precision_score(y_clasico, y_pred_clasico, zero_division=0)
+recall_clasico = recall_score(y_clasico, y_pred_clasico, zero_division=0)
+f1_clasico = f1_score(y_clasico, y_pred_clasico, zero_division=0)
+auc_clasico = roc_auc_score(y_clasico, y_prob_clasico)
+
+y_prob_clasico_segura = np.clip(
+    y_prob_clasico,
+    1e-7,
+    1.0 - 1e-7
+)
+
+log_loss_clasico = -np.mean(
+    y_clasico * np.log(y_prob_clasico_segura)
+    +
+    (1.0 - y_clasico) * np.log(1.0 - y_prob_clasico_segura)
+)
+
+df_metricas_clasico = pd.DataFrame({
+    "Métrica": [
+        "Accuracy",
+        "Precision",
+        "Recall",
+        "F1-score",
+        "ROC-AUC",
+        "Log-Loss"
+    ],
+    "Valor": [
+        accuracy_clasico,
+        precision_clasico,
+        recall_clasico,
+        f1_clasico,
+        auc_clasico,
+        log_loss_clasico
+    ]
+})
+
+mostrar_tabla(
+    "MÉTRICAS DEL MODELO CLÁSICO",
+    "Resultados obtenidos mediante una regresión logística clásica "
+    "entrenada directamente con las variables originales. La variable "
+    "consumo_kwh se transforma en dos clases utilizando la misma mediana "
+    "empleada por el modelo QFT + CKKS.",
+    df_metricas_clasico
+)
+
+print(
+    f"Tiempo de entrenamiento clásico: "
+    f"{tiempo_entrenamiento_clasico:.6f} segundos"
+)
+
+
+# ============================================================
+# TABLA COMPARATIVA: CLÁSICO VS. QFT + CKKS
+# ============================================================
+
+df_comparacion = pd.DataFrame({
+    "Modelo": ["Clásico", "QFT + CKKS"],
+    "Accuracy ↑": [accuracy_clasico, accuracy_final],
+    "Precision ↑": [precision_clasico, precision_final],
+    "Recall ↑": [recall_clasico, recall_final],
+    "F1-score ↑": [f1_clasico, f1_final],
+    "ROC-AUC ↑": [auc_clasico, auc_final],
+    "Log-Loss ↓": [log_loss_clasico, log_loss_final]
+})
+
+df_comparacion_formateada = df_comparacion.copy()
+
+for columna in [
+    "Accuracy ↑",
+    "Precision ↑",
+    "Recall ↑",
+    "F1-score ↑",
+    "ROC-AUC ↑",
+    "Log-Loss ↓"
+]:
+    df_comparacion_formateada[columna] = (
+        df_comparacion_formateada[columna]
+        .map(lambda x: f"{x:.8f}")
+    )
+
+mostrar_tabla(
+    "TABLA COMPARATIVA: MODELO CLÁSICO VS. QFT + CKKS",
+    "Compara el desempeño de la regresión logística clásica frente "
+    "al modelo de regresión logística basado en QFT y CKKS. Accuracy, "
+    "Precision, Recall y F1-score se interpretan como métricas de "
+    "desempeño, donde valores mayores son mejores. ROC-AUC también "
+    "es mejor cuanto mayor es su valor. Log-Loss mide el error "
+    "probabilístico, por lo que valores menores son mejores.",
+    df_comparacion_formateada
+)
+
+
+# =====================================================================
+# 11. RESULTADOS FINALES DEL MODELO
+# =====================================================================
+
+print()
+print("=" * 80)
+print("RESULTADOS FINALES DEL MODELO")
+print("=" * 80)
+
+
+# =====================================================================
+# TABLA 3
+# PESOS FINALES DEL MODELO
+# =====================================================================
+
+df_pesos = pd.DataFrame({
+
+    "Característica": FEATURES,
+
+    "Peso final": [
+
+        f"{peso:.10f}"
+
+        for peso in pesos_finales
+
+    ]
+
+})
+
+
+mostrar_tabla(
+
+    "TABLA 3. PESOS FINALES DEL MODELO DE REGRESIÓN LOGÍSTICA CKKS",
+
+    "Presenta los pesos finales obtenidos después del entrenamiento "
+    "homomórfico. Cada peso representa la contribución de la variable "
+    "correspondiente en la ecuación de regresión utilizada para realizar "
+    "las predicciones.",
+
+    df_pesos
+
+)
+
+
+# =====================================================================
+# ECUACIÓN DEL MODELO
+# =====================================================================
+
+print()
+print("Ecuación del modelo:")
+print()
+
+print(
+
+    "Y = "
+
+    f"{pesos_finales[0]:.6f} + "
+
+    f"({pesos_finales[1]:.6f})·qft_f1 + "
+
+    f"({pesos_finales[2]:.6f})·qft_f2 + "
+
+    f"({pesos_finales[3]:.6f})·qft_f3"
+
+)
+
+
+# =====================================================================
+# 12. TABLA DE MÉTRICAS
+# =====================================================================
+
+df_metricas = pd.DataFrame({
+    "Métrica": [
+        "Accuracy",
+        "Precision",
+        "Recall",
+        "F1-score",
+        "ROC-AUC",
+        "Log-Loss"
+    ],
+    "Valor": [
+        accuracy_final,
+        precision_final,
+        recall_final,
+        f1_final,
+        auc_final,
+        log_loss_final
+    ]
+})
+
+mostrar_tabla(
+    "TABLA 4. MÉTRICAS DE EVALUACIÓN DEL MODELO",
+    "Presenta las métricas utilizadas para evaluar el desempeño "
+    "de la regresión logística entrenada mediante el esquema CKKS. "
+    "Accuracy, Precision, Recall, F1-score y ROC-AUC evalúan la "
+    "clasificación, mientras que Log-Loss evalúa la calidad de las "
+    "probabilidades estimadas.",
+    df_metricas
+)
+
+
+# =====================================================================
+# 13. GUARDAR TABLA DE MÉTRICAS EN CSV
+# =====================================================================
+
+archivo_metricas_csv = (
+
+    f"metricas_modelo_ckks_{DATASET}.csv"
+
+)
+
+
+df_metricas.to_csv(
+
+    archivo_metricas_csv,
+
+    index=False
+
+)
+
+
+# =====================================================================
+# 14. GENERAR TABLA LATEX
+# =====================================================================
+
+df_metricas_latex = df_metricas.copy()
+
+
+df_metricas_latex["Valor"] = (
+
+    df_metricas_latex["Valor"]
+
+    .map(lambda x: f"{x:.8f}")
+
+)
+
+
+tabla_latex = df_metricas_latex.to_latex(
+
+    index=False,
+
+    escape=False
+
+)
+
+
+archivo_metricas_latex = (
+
+    f"metricas_modelo_ckks_{DATASET}.tex"
+
+)
+
+
+with open(
+
+    archivo_metricas_latex,
+
+    "w",
+
+    encoding="utf-8"
+
+) as f:
+
+    f.write(tabla_latex)
+
+
+print()
+print(
+
+    f"[+] Tabla CSV guardada en: "
+
+    f"{archivo_metricas_csv}"
+
+)
+
+
+print(
+
+    f"[+] Tabla LaTeX guardada en: "
+
+    f"{archivo_metricas_latex}"
+
+)
+
+
+# =====================================================================
+# 15. TABLA DE EJEMPLOS DE PREDICCIÓN
+# =====================================================================
+
+np.random.seed(42)
+
+cantidad_muestras = min(
+    10,
+    numero_registros
+)
+
+indices = np.random.choice(
+    numero_registros,
+    cantidad_muestras,
+    replace=False
+)
+
+indices.sort()
+
+datos_prediccion = []
+
+for indice in indices:
+
+    clase_real = int(Y_target_clase[indice])
+    probabilidad = Y_prob_final[indice]
+    clase_predicha = int(Y_pred_clase_final[indice])
+
+    datos_prediccion.append({
+        "Índice": indice,
+        "Clase real": clase_real,
+        "Probabilidad clase 1": probabilidad,
+        "Clase predicha": clase_predicha
+    })
+
+df_predicciones = pd.DataFrame(
+    datos_prediccion
+)
+
+mostrar_tabla(
+    "TABLA 5. EJEMPLOS DE PREDICCIÓN DEL MODELO",
+    "Presenta una muestra de diez registros seleccionados aleatoriamente "
+    "para comparar la clase real con la probabilidad estimada de "
+    "pertenencia a la clase 1 y la clase predicha. La clasificación "
+    "se realiza utilizando un umbral de probabilidad de 0.5.",
+    df_predicciones
+)
+
+
+# =====================================================================
+# 16. GRÁFICO 1
+# LOSS / MSE VS. ÉPOCAS
+# =====================================================================
+
+print()
+print("=" * 100)
+print("GRÁFICO 1. EVOLUCIÓN DEL LOG-LOSS DURANTE EL ENTRENAMIENTO CKKS")
+print("=" * 100)
+
+print()
+
+print(
+     "Descripción: Este gráfico muestra la evolución del Log-Loss durante "
+    "las épocas de entrenamiento. Su finalidad es evaluar la convergencia "
+    "de la regresión logística y observar la reducción del error "
+    "probabilístico durante el proceso de optimización."
+)
+
+
+plt.figure(
+
+    figsize=(10, 6)
+
+)
+
+
+plt.plot(
+
+    range(1, EPOCHS + 1),
+
+    historial_loss,
+
+    linewidth=2
+
+)
+
+
+plt.xlabel(
+
+    "Época"
+
+)
+
+
+plt.ylabel(
+
+    "Log-Loss"
+
+)
+
+
+plt.title(
+
+    f"Gráfico 1. Evolución del Log-Loss durante el entrenamiento CKKS - {DATASET}"
+
+)
+
+
+plt.grid(
+
+    True,
+
+    alpha=0.3
+
+)
+
+
+plt.tight_layout()
+
+
+archivo_grafico_1 = (
+
+    f"grafico_1_loss_mse_{DATASET}.png"
+
+)
+
+
+plt.savefig(
+
+    archivo_grafico_1,
+
+    dpi=300
+
+)
+
+
+plt.show()
+
+
+# =====================================================================
+# 17. GRÁFICO 2
+# VALORES REALES VS. PREDICHOS
+# =====================================================================
+
+print()
+print("=" * 100)
+print("GRÁFICO 2. CLASES REALES VS. PROBABILIDADES PREDICHAS")
+print("=" * 100)
+
+print()
+
+print(
+    "Descripción: Este gráfico compara los valores reales de la variable "
+    "objetivo con los valores predichos por el modelo. La proximidad de "
+    "los puntos respecto a la línea diagonal indica un mejor ajuste entre "
+    "las predicciones y los valores observados."
+)
+
+
+plt.figure(
+
+    figsize=(10, 6)
+
+)
+
+
+plt.scatter(
+
+    Y_target_clase,
+
+    Y_prob_final,
+
+    alpha=0.5
+
+)
+
+
+valor_minimo = min(
+
+    Y_target_clase.min(),
+
+    Y_prob_final.min()
+
+)
+
+
+valor_maximo = max(
+
+    Y_target_clase.max(),
+
+    Y_prob_final.max()
+
+)
+
+
+plt.plot(
+
+    [valor_minimo, valor_maximo],
+
+    [valor_minimo, valor_maximo],
+
+    linewidth=2
+
+)
+
+
+plt.xlabel(
+
+    "Clase real"
+
+)
+
+
+plt.ylabel(
+
+    "Probabilidad clase 1"
+
+)
+
+
+plt.title(
+
+    f"Gráfico 2. Clases reales vs. probabilidades predichas - {DATASET}"
+
+)
+
+
+plt.grid(
+
+    True,
+
+    alpha=0.3
+
+)
+
+
+plt.tight_layout()
+
+
+archivo_grafico_2 = (
+
+    f"grafico_2_real_vs_predicho_{DATASET}.png"
+
+)
+
+
+plt.savefig(
+
+    archivo_grafico_2,
+
+    dpi=300
+
+)
+
+
+plt.show()
+
+
+# =====================================================================
+# =====================================================================
+# 18. GRÁFICO 3
+# FUNCIÓN LOGÍSTICA
+# =====================================================================
+
+indice_qft_f1 = FEATURES.index("qft_f1")
+indice_qft_f2 = FEATURES.index("qft_f2")
+indice_qft_f3 = FEATURES.index("qft_f3")
+
+qft_f1_min = X_claro_local[:, indice_qft_f1].min()
+qft_f1_max = X_claro_local[:, indice_qft_f1].max()
+
+qft_f1_grid = np.linspace(
+    qft_f1_min,
+    qft_f1_max,
+    200
+)
+
+qft_f2_media = np.mean(
+    X_claro_local[:, indice_qft_f2]
+)
+
+qft_f3_media = np.mean(
+    X_claro_local[:, indice_qft_f3]
+)
+
+z_regresion = (
+    pesos_finales[0]
+    +
+    pesos_finales[1] * qft_f1_grid
+    +
+    pesos_finales[2] * qft_f2_media
+    +
+    pesos_finales[3] * qft_f3_media
+)
+
+probabilidad_regresion = 1.0 / (
+    1.0 + np.exp(-np.clip(z_regresion, -50, 50))
+)
+
+print()
+print("=" * 100)
+print("GRÁFICO 3. FUNCIÓN LOGÍSTICA APRENDIDA")
+print("=" * 100)
+print()
+
+print(
+    "Descripción: Este gráfico representa la probabilidad estimada "
+    "de pertenencia a la clase 1 en función de qft_f1, manteniendo "
+    "qft_f2 y qft_f3 en sus valores medios. Permite visualizar la "
+    "función logística aprendida por el modelo."
+)
+
+plt.figure(figsize=(10, 6))
+
+plt.scatter(
+    X_claro_local[:, indice_qft_f1],
+    Y_target_clase,
+    alpha=0.25,
+    label="Clases reales"
+)
+
+plt.plot(
+    qft_f1_grid,
+    probabilidad_regresion,
+    linewidth=3,
+    label="Función logística"
+)
+
+plt.axhline(
+    y=0.5,
+    linewidth=2,
+    linestyle="--",
+    label="Umbral 0.5"
+)
+
+plt.xlabel("qft_f1")
+plt.ylabel("Probabilidad clase 1")
+plt.title(
+    f"Gráfico 3. Función logística aprendida - {DATASET}"
+)
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+
+archivo_grafico_3 = (
+    f"grafico_3_funcion_logistica_{DATASET}.png"
+)
+
+plt.savefig(
+    archivo_grafico_3,
+    dpi=300
+)
+
+plt.show()
+
+
+# 19. GRÁFICO 4
+# RESIDUOS
+# =====================================================================
+#
+# Residuo:
+#
+#       e_i = y_i - ŷ_i
+#
+# =====================================================================
+
+residuos = (
+
+    Y_target_clase -
+
+    Y_prob_final
+
+)
+
+
+print()
+print("=" * 100)
+print("GRÁFICO 4. ANÁLISIS DE RESIDUOS DE CLASIFICACIÓN")
+print("=" * 100)
+
+print()
+
+print(
+    "Descripción: Este gráfico representa los residuos en función de "
+    "las probabilidades predichas. Permite identificar patrones sistemáticos "
+    "en los errores y evaluar si estos se distribuyen aproximadamente "
+    "alrededor de cero."
+)
+
+
+plt.figure(
+
+    figsize=(10, 6)
+
+)
+
+
+plt.scatter(
+
+    Y_prob_final,
+
+    residuos,
+
+    alpha=0.5
+
+)
+
+
+plt.axhline(
+
+    y=0,
+
+    linewidth=2
+
+)
+
+
+plt.xlabel(
+
+    "Probabilidad predicha"
+
+)
+
+
+plt.ylabel(
+
+    "Residuos"
+
+)
+
+
+plt.title(
+
+    f"Gráfico 4. Análisis de residuos - {DATASET}"
+
+)
+
+
+plt.grid(
+
+    True,
+
+    alpha=0.3
+
+)
+
+
+plt.tight_layout()
+
+
+archivo_grafico_4 = (
+
+    f"grafico_4_residuos_{DATASET}.png"
+
+)
+
+
+plt.savefig(
+
+    archivo_grafico_4,
+
+    dpi=300
+
+)
+
+
+plt.show()
+
+
+# =====================================================================
+# 20. GRÁFICO 5
+# DISTRIBUCIÓN DE ERRORES
+# =====================================================================
+
+errores = (
+
+    Y_target_clase -
+
+    Y_prob_final
+
+)
+
+
+print()
+print("=" * 100)
+print("GRÁFICO 5. DISTRIBUCIÓN DE LOS ERRORES DE CLASIFICACIÓN")
+print("=" * 100)
+
+print()
+
+print(
+    "Descripción: Este gráfico muestra la distribución de los errores "
+    "obtenidos por el modelo. Permite analizar la dispersión de los "
+    "errores, observar su concentración alrededor de cero e identificar "
+    "posibles valores atípicos."
+)
+
+
+plt.figure(
+
+    figsize=(10, 6)
+
+)
+
+
+plt.hist(
+
+    errores,
+
+    bins=30,
+
+    alpha=0.8
+
+)
+
+
+plt.axvline(
+
+    x=0,
+
+    linewidth=2
+
+)
+
+
+plt.xlabel(
+
+    "Error de clasificación"
+
+)
+
+
+plt.ylabel(
+
+    "Frecuencia"
+
+)
+
+
+plt.title(
+
+    f"Gráfico 5. Distribución de los errores - {DATASET}"
+
+)
+
+
+plt.grid(
+
+    True,
+
+    alpha=0.3
+
+)
+
+
+plt.tight_layout()
+
+
+archivo_grafico_5 = (
+
+    f"grafico_5_distribucion_errores_{DATASET}.png"
+
+)
+
+
+plt.savefig(
+
+    archivo_grafico_5,
+
+    dpi=300
+
+)
+
+
+plt.show()
+
+
+# =====================================================================
+# 21. RESUMEN DE GRÁFICOS
+# =====================================================================
+
+print()
+print("=" * 80)
+print("GRÁFICOS GENERADOS")
+print("=" * 80)
+
+print()
+
+print(
+
+    f"[+] Gráfico 1: {archivo_grafico_1}"
+
+)
+
+
+print(
+
+    f"[+] Gráfico 2: {archivo_grafico_2}"
+
+)
+
+
+print(
+
+    f"[+] Gráfico 3: {archivo_grafico_3}"
+
+)
+
+
+print(
+
+    f"[+] Gráfico 4: {archivo_grafico_4}"
+
+)
+
+
+print(
+
+    f"[+] Gráfico 5: {archivo_grafico_5}"
+
+)
+
+
+# =====================================================================
+# 22. GUARDAR RESULTADO COMPLETO
+# =====================================================================
+
+archivo_resultados = (
+
+    f"resultados_entrenamiento_ckks_{DATASET}.txt"
+
+)
+
+
+with open(
+
+    archivo_resultados,
+
+    "w",
+
+    encoding="utf-8"
+
+) as f:
+
+
+    f.write(
+
+        "RESULTADOS DEL ENTRENAMIENTO LOGÍSTICO CKKS\n"
+
+    )
+
+
+    f.write(
+
+        "=" * 70 + "\n"
+
+    )
+
+
+    f.write(
+
+        f"Dataset: {DATASET}\n"
+
+    )
+
+
+    f.write(
+
+        f"Registros: {numero_registros}\n"
+
+    )
+
+
+    f.write(
+
+        f"Chunks: {numero_chunks}\n"
+
+    )
+
+
+    f.write(
+
+        f"Learning rate: {LR}\n"
+
+    )
+
+
+    f.write(
+
+        f"Epochs: {EPOCHS}\n"
+
+    )
+
+
+    f.write("\n")
+
+
+    # ---------------------------------------------------------------
+    # PESOS FINALES
+    # ---------------------------------------------------------------
+
+    f.write(
+
+        "PESOS FINALES\n"
+
+    )
+
+
+    f.write(
+
+        "-" * 70 + "\n"
+
+    )
+
+
+    for feature, peso in zip(
+
+        FEATURES,
+
+        pesos_finales
+
+    ):
+
+
+        f.write(
+
+            f"{feature} = {peso:.10f}\n"
+
+        )
+
+
+    f.write("\n")
+
+
+    # ---------------------------------------------------------------
+    # MODELO
+    # ---------------------------------------------------------------
+
+    f.write(
+
+        "MODELO\n"
+
+    )
+
+
+    f.write(
+
+        "-" * 70 + "\n"
+
+    )
+
+
+    f.write(
+
+        "Y = "
+
+        f"{pesos_finales[0]:.10f} + "
+
+        f"({pesos_finales[1]:.10f})*qft_f1 + "
+
+        f"({pesos_finales[2]:.10f})*qft_f2 + "
+
+        f"({pesos_finales[3]:.10f})*qft_f3\n"
+
+    )
+
+
+    f.write("\n")
+
+
+    # ---------------------------------------------------------------
+    # MÉTRICAS
+    # ---------------------------------------------------------------
+
+    f.write(
+
+        "MÉTRICAS\n"
+
+    )
+
+
+    f.write(
+
+        "-" * 70 + "\n"
+
+    )
+
+
+    f.write(
+
+        f"MSE  = {mse_final:.10f}\n"
+
+    )
+
+
+    f.write(
+
+        f"RMSE = {rmse_final:.10f}\n"
+
+    )
+
+
+    f.write(
+
+        f"MAE  = {mae_final:.10f}\n"
+
+    )
+
+
+    f.write(
+
+        f"R2   = {r2_final:.10f}\n"
+
+    )
+
+
+    f.write("\n")
+
+
+    # ---------------------------------------------------------------
+    # TIEMPO
+    # ---------------------------------------------------------------
+
+    f.write(
+
+        f"Tiempo entrenamiento = "
+
+        f"{tiempo_entrenamiento:.6f} segundos\n"
+
+    )
+
+
+print()
+
+print(
+
+    f"[+] Resultado completo guardado en: "
+
+    f"{archivo_resultados}"
+
+)
+
+
+# =====================================================================
+# 23. FINAL
+# =====================================================================
+
+print()
+print("=" * 80)
+print("PROCESAMIENTO FINALIZADO CORRECTAMENTE")
+print("=" * 80)
 ```
 
 </details>
+
 ##### 2.3. Resultados: Tablas
 ##### 2.4. Resultados: Figuras
 
