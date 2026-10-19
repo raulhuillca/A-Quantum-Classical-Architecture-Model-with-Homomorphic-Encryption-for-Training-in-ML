@@ -80,6 +80,33 @@ Evaluación
       └── Precisión (Accuracy)
 ```
 
+```mermaid
+graph TD
+    A[📊 Datos Clásicos] --> B[🧬 Generación de Datos Sintéticos TVAE]
+    B --> C[⚙️ Preprocesamiento y Normalización]
+    C --> D[⚛️ Codificación de Amplitud]
+    D --> E[🔄 Transformada Cuántica de Fourier QFT]
+    E --> F[🌊 Dominio de la Frecuencia]
+    F --> G[🔐 Cifrado Homomórfico CKKS]
+    
+    G --> H[🤖 Entrenamiento Ciego]
+    
+    subgraph Modelos [Modelos de Aprendizaje Automático]
+        H --> H1[📈 Regresión Lineal]
+        H --> H2[📉 Regresión Logística]
+        H --> H3[🎯 LS-SVM]
+        H --> H4[🧠 Shallow MLP]
+    end
+
+    H1 & H2 & H3 & H4 --> I[📊 Evaluación de Rendimiento]
+
+    subgraph Metricas [Métricas de Evaluación]
+        I --> M1[MSE / RMSE / MAE]
+        I --> M2[R² Score]
+        I --> M3[Accuracy / Precisión]
+    end
+```
+
 El propósito no es afirmar que la computación cuántica reemplaza al aprendizaje automático clásico, sino estudiar experimentalmente la integración de:
 
 - Transformación de características cuánticas.
