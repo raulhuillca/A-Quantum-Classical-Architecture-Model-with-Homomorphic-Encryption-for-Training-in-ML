@@ -91,7 +91,7 @@ La arquitectura evalúa la interacción entre:
 ```
 ### 📐 Fundamentos teóricos
 
-#### 1. Generación de datos sintéticos
+### 1. Generación de datos sintéticos
 
 
 El flujo experimental comienza con conjuntos de datos sintéticos que representan datos de consumo de energía. Las variables principales son:
