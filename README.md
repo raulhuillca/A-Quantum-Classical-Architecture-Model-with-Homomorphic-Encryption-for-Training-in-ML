@@ -6580,8 +6580,1316 @@ $$
 <summary><b>💻 Haz clic aquí para desplegar el Código Fuente (Python)</b></summary>
 
 ```python
-# Tu código Python aquí
-print("Hola Mundo")
+import tenseal as ts
+import numpy as np
+import pandas as pd
+import pickle
+import os
+import time
+import math
+import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+
+
+
+# =====================================================================
+# FUNCIÓN PARA MOSTRAR TABLAS EN CONSOLA
+# =====================================================================
+
+def mostrar_tabla(titulo, descripcion, dataframe):
+
+    print()
+    print("=" * 100)
+    print(titulo)
+    print("=" * 100)
+
+    print()
+    print("Descripción:")
+    print(descripcion)
+
+    print()
+    print(dataframe.to_string(index=False))
+
+    print()
+    print("-" * 100)
+
+
+# =====================================================================
+# 1. CONFIGURACIÓN
+# =====================================================================
+
+# Seleccionar dataset
+DATASET = "500K"
+
+archivo_contexto = "contexto_ckks.bytes"
+
+archivo_datos_cifrados = (
+    f"Datos_cifrados_homomorficamente(ckks)/"
+    f"datos_cifrados_ckks_{DATASET}.pkl"
+)
+
+# Parámetros del entrenamiento
+LR = 0.05
+EPOCHS = 150
+GAMMA = 1.0
+
+# Inicialización de los pesos
+PESO_INICIAL = 0.01
+
+# Número de características
+FEATURES = [
+    "bias",
+    "qft_f1",
+    "qft_f2",
+    "qft_f3"
+]
+
+N_FEATURES = len(FEATURES)
+
+# Capacidad CKKS
+POLY_MODULUS_DEGREE = 8192
+SLOTS_CKKS = POLY_MODULUS_DEGREE // 2
+
+
+# =====================================================================
+# 2. CARGAR CONTEXTO CKKS
+# =====================================================================
+
+print("=" * 80)
+print("ENTRENAMIENTO HÍBRIDO CON CKKS")
+print("=" * 80)
+
+print()
+print("[1/6] Cargando contexto CKKS...")
+
+with open(archivo_contexto, "rb") as f:
+    context = ts.context_from(f.read())
+
+print("[+] Contexto CKKS cargado correctamente.")
+
+
+# =====================================================================
+# 3. CARGAR DATASET CIFRADO
+# =====================================================================
+
+print()
+print("[2/6] Cargando datos cifrados...")
+
+if not os.path.exists(archivo_datos_cifrados):
+
+    raise FileNotFoundError(
+        f"No existe el archivo:\n{archivo_datos_cifrados}"
+    )
+
+with open(archivo_datos_cifrados, "rb") as f:
+
+    datos = pickle.load(f)
+
+
+numero_registros = datos["numero_registros"]
+
+numero_chunks = datos["numero_chunks"]
+
+
+Y_target_scaled = np.asarray(
+    datos["Y_target_scaled"],
+    dtype=np.float64
+)
+
+
+y_mean = datos["y_mean"]
+
+y_scale = datos["y_scale"]
+
+
+print(
+    f"[+] Dataset cargado correctamente: {DATASET}"
+)
+
+
+# =====================================================================
+# TABLA 1
+# INFORMACIÓN DEL DATASET CIFRADO
+# =====================================================================
+
+tabla_dataset = pd.DataFrame({
+
+    "Característica": [
+
+        "Dataset",
+
+        "Número de registros",
+
+        "Número de características",
+
+        "Slots CKKS disponibles",
+
+        "Número de chunks",
+
+        "Esquema criptográfico"
+
+    ],
+
+    "Valor": [
+
+        DATASET,
+
+        f"{numero_registros:,}",
+
+        N_FEATURES,
+
+        f"{SLOTS_CKKS:,}",
+
+        numero_chunks,
+
+        "CKKS"
+
+    ]
+
+})
+
+
+mostrar_tabla(
+
+    "TABLA 1. INFORMACIÓN DEL DATASET CIFRADO",
+
+    "Presenta las características principales del conjunto de datos "
+    "cifrado utilizado como entrada para el entrenamiento del modelo "
+    "del modelo LS-SVM bajo el esquema homomórfico CKKS.",
+
+    tabla_dataset
+
+)
+
+
+# =====================================================================
+# 4. RECONSTRUIR LOS CIPHERTEXTS
+# =====================================================================
+
+print()
+print("[3/6] Reconstruyendo ciphertexts CKKS...")
+
+X_cifrado = {}
+
+
+for feature in FEATURES:
+
+    X_cifrado[feature] = []
+
+    chunks = datos["X_cifrado_bytes"][feature]
+
+
+    print(
+        f"    {feature}: "
+        f"{len(chunks)} chunks"
+    )
+
+
+    for chunk_bytes in chunks:
+
+        vector_cifrado = ts.ckks_vector_from(
+
+            context,
+
+            chunk_bytes
+
+        )
+
+
+        X_cifrado[feature].append(
+
+            vector_cifrado
+
+        )
+
+
+print(
+    "[+] Ciphertexts reconstruidos correctamente."
+)
+
+
+# =====================================================================
+# 5. RECONSTRUIR X EN CLARO PARA EL CÁLCULO DEL GRADIENTE
+# =====================================================================
+#
+# IMPORTANTE:
+#
+# Esta sección hace que el procedimiento sea HÍBRIDO.
+#
+# Los datos se almacenan y las operaciones de predicción se realizan
+# sobre ciphertexts, pero el gradiente se calcula después de recuperar
+# los valores de X.
+#
+# Por tanto, este algoritmo NO debe denominarse entrenamiento FHE
+# completamente ciego.
+#
+# =====================================================================
+
+print()
+print(
+    "[4/6] Preparando datos para el cálculo del gradiente..."
+)
+
+
+X_claro_columnas = []
+
+
+for feature in FEATURES:
+
+    valores_feature = []
+
+
+    for chunk in X_cifrado[feature]:
+
+        valores_chunk = np.asarray(
+
+            chunk.decrypt(),
+
+            dtype=np.float64
+
+        )
+
+
+        valores_feature.extend(
+
+            valores_chunk
+
+        )
+
+
+    X_claro_columnas.append(
+
+        np.asarray(
+
+            valores_feature,
+
+            dtype=np.float64
+
+        )
+
+    )
+
+
+X_claro_local = np.column_stack(
+
+    X_claro_columnas
+
+)
+
+
+print(
+
+    f"[+] Matriz X reconstruida: "
+
+    f"{X_claro_local.shape}"
+
+)
+
+
+# =====================================================================
+# PREPARAR VARIABLE OBJETIVO PARA LS-SVM
+# =====================================================================
+#
+# consumo_kwh es continua; para clasificación se mantiene exactamente
+# la misma transformación usada en la versión de clasificación anterior: la mediana
+# separa las dos clases. LS-SVM utiliza etiquetas {-1,+1}.
+#
+#   -1 = consumo <= mediana
+#   +1 = consumo > mediana
+# =====================================================================
+
+archivo_datos_originales = (
+    f"Datos_sinteticos/dataset_sintetico_{DATASET.lower()}.csv"
+)
+
+df_objetivo = pd.read_csv(archivo_datos_originales)
+y_original = df_objetivo["consumo_kwh"].to_numpy(dtype=np.float64)
+
+if len(y_original) != numero_registros:
+    raise ValueError(
+        f"El CSV original ({len(y_original)} registros) no coincide "
+        f"con el dataset cifrado ({numero_registros} registros)."
+    )
+
+umbral_consumo = np.median(y_original)
+
+Y_target_clase = (y_original > umbral_consumo).astype(np.float64)
+Y_target_lssvm = np.where(Y_target_clase == 1.0, 1.0, -1.0)
+
+print()
+print("[+] Variable objetivo preparada para LS-SVM.")
+print(f"    Umbral de clasificación: {umbral_consumo:.10f} kWh")
+print("    Clase 0: consumo <= umbral  -> etiqueta LS-SVM = -1")
+print("    Clase 1: consumo > umbral   -> etiqueta LS-SVM = +1")
+print(f"    Parámetro gamma: {GAMMA}")
+print()
+
+# =====================================================================
+# 6. CREAR PESOS CIFRADOS POR CHUNK
+# =====================================================================
+#
+# En lugar de crear:
+#
+#     ts.ckks_vector(context, [gradiente] * n_muestras)
+#
+# se mantiene un vector de pesos por cada chunk.
+#
+# Cada posición del vector contiene inicialmente el mismo peso.
+#
+# Ejemplo para 10K:
+#
+#     chunk 1 -> 4096 pesos
+#     chunk 2 -> 4096 pesos
+#     chunk 3 -> 1808 pesos
+#
+# =====================================================================
+
+print()
+print("[5/6] Inicializando pesos cifrados...")
+
+
+w = {}
+
+
+for feature in FEATURES:
+
+    w[feature] = []
+
+
+    for c in range(numero_chunks):
+
+        inicio = c * SLOTS_CKKS
+
+
+        fin = min(
+
+            inicio + SLOTS_CKKS,
+
+            numero_registros
+
+        )
+
+
+        longitud_chunk = fin - inicio
+
+
+        peso_chunk = ts.ckks_vector(
+
+            context,
+
+            [PESO_INICIAL] * longitud_chunk
+
+        )
+
+
+        w[feature].append(
+
+            peso_chunk
+
+        )
+
+
+print(
+    "[+] Pesos cifrados inicializados."
+)
+
+
+# =====================================================================
+# 7. ENTRENAMIENTO LS-SVM
+# =====================================================================
+#
+# LS-SVM lineal en forma primal:
+#
+#   J(w) = 1/2 ||w||^2 + gamma/2 * sum_i (y_i - x_i^T w)^2
+#
+# donde las etiquetas son {-1,+1}. El predictor lineal se calcula sobre
+# ciphertexts CKKS. Debido a que el procedimiento conserva el carácter
+# híbrido del experimento original, el error y el gradiente se calculan
+# con los datos X reconstruidos en claro.
+# =====================================================================
+
+print()
+print("=" * 80)
+print("INICIANDO ENTRENAMIENTO LS-SVM")
+print("=" * 80)
+
+print(f"Learning rate : {LR}")
+print(f"Épocas        : {EPOCHS}")
+print(f"Gamma         : {GAMMA}")
+print("Tipo de LS-SVM: lineal, formulación primal")
+
+historial_mse = []
+historial_rmse = []
+historial_loss = []
+tabla_entrenamiento = []
+
+# Copia numérica de los pesos para calcular la regularización L2 sin
+# descifrar nuevamente todos los ciphertexts en cada época.
+pesos_actuales = np.full(
+    N_FEATURES,
+    PESO_INICIAL,
+    dtype=np.float64
+)
+
+tiempo_inicio_entrenamiento = time.perf_counter()
+
+for epoch in range(EPOCHS):
+
+    puntuaciones = []
+
+    for c in range(numero_chunks):
+
+        # Predictor lineal cifrado: f(x) = b + w1*x1 + w2*x2 + w3*x3
+        score_enc = X_cifrado["bias"][c].mul(w["bias"][c])
+
+        termino = X_cifrado["qft_f1"][c].mul(w["qft_f1"][c])
+        score_enc = score_enc + termino
+
+        termino = X_cifrado["qft_f2"][c].mul(w["qft_f2"][c])
+        score_enc = score_enc + termino
+
+        termino = X_cifrado["qft_f3"][c].mul(w["qft_f3"][c])
+        score_enc = score_enc + termino
+
+        # Se descifra únicamente el score del chunk para conservar
+        # la misma arquitectura híbrida del experimento.
+        score_chunk = np.asarray(
+            score_enc.decrypt(),
+            dtype=np.float64
+        )
+
+        puntuaciones.extend(score_chunk)
+
+    Y_score = np.asarray(puntuaciones, dtype=np.float64)
+
+    if not np.all(np.isfinite(Y_score)):
+        raise RuntimeError("El score LS-SVM contiene valores NaN o Inf.")
+
+    # Error LS-SVM: e_i = y_i - f(x_i)
+    error = Y_target_lssvm - Y_score
+
+    # Gradiente de la función objetivo primal LS-SVM.
+    # La regularización se aplica a los pesos del modelo.
+    gradientes = (
+        X_claro_local.T @ (GAMMA * (Y_score - Y_target_lssvm))
+    ) / numero_registros
+
+    # Regularización L2 de los pesos. El bias se deja sin regularizar.
+    gradientes[1:] += pesos_actuales[1:] / numero_registros
+
+    if not np.all(np.isfinite(gradientes)):
+        raise RuntimeError(
+            f"Gradiente inválido en época {epoch + 1}: {gradientes}"
+        )
+
+    for j, feature in enumerate(FEATURES):
+
+        delta = LR * gradientes[j]
+
+        if not np.isfinite(delta):
+            raise RuntimeError(
+                f"Delta inválido para {feature}: {delta}"
+            )
+
+        for c in range(numero_chunks):
+            w[feature][c] = w[feature][c].sub(delta)
+
+        pesos_actuales[j] -= delta
+
+    # Función objetivo LS-SVM para seguimiento de convergencia.
+    error_post = Y_target_lssvm - Y_score
+    mse = np.mean(error_post ** 2)
+    rmse = np.sqrt(mse)
+    loss_lssvm = (
+        0.5 * np.sum(pesos_actuales[1:] ** 2)
+        + 0.5 * GAMMA * np.sum(error_post ** 2)
+    ) / numero_registros
+
+    # Para conservar las métricas de clasificación, se transforma el
+    # score LS-SVM en probabilidad mediante una sigmoide SOLO para
+    # evaluación. El algoritmo LS-SVM no utiliza esta sigmoide para
+    # entrenar.
+    probabilidad = 1.0 / (
+        1.0 + np.exp(-np.clip(Y_score, -50, 50))
+    )
+    clase_predicha = (Y_score >= 0.0).astype(int)
+
+    accuracy = accuracy_score(Y_target_clase, clase_predicha)
+
+    historial_loss.append(loss_lssvm)
+    historial_mse.append(mse)
+    historial_rmse.append(rmse)
+
+    tabla_entrenamiento.append({
+        "Época": epoch + 1,
+        "MSE": mse,
+        "RMSE": rmse,
+        "LS-SVM Loss": loss_lssvm,
+        "Accuracy": accuracy
+    })
+
+tiempo_fin_entrenamiento = time.perf_counter()
+tiempo_entrenamiento = tiempo_fin_entrenamiento - tiempo_inicio_entrenamiento
+
+# =====================================================================
+# TABLA 2
+# HISTORIAL COMPLETO DEL ENTRENAMIENTO
+# =====================================================================
+
+df_entrenamiento = pd.DataFrame(
+
+    tabla_entrenamiento
+
+)
+
+
+mostrar_tabla(
+
+    "TABLA 2. EVOLUCIÓN DEL ENTRENAMIENTO DEL MODELO LOGÍSTICO CKKS",
+
+    "Presenta la evolución del MSE, RMSE, función objetivo LS-SVM y Accuracy durante "
+    "todas las épocas del entrenamiento. La función objetivo permite evaluar "
+    "la convergencia del LS-SVM y Accuracy muestra la proporción de "
+    "clasificaciones correctas. Esta tabla permite analizar la convergencia.",
+
+    df_entrenamiento
+
+)
+
+
+# =====================================================================
+# 8. DESCIFRAR PESOS FINALES
+# =====================================================================
+
+print()
+print("=" * 80)
+print("DESCIFRANDO PESOS FINALES")
+print("=" * 80)
+
+
+pesos_finales = []
+
+
+for feature in FEATURES:
+
+    pesos_chunks = []
+
+
+    for c in range(numero_chunks):
+
+        valores = np.asarray(
+
+            w[feature][c].decrypt(),
+
+            dtype=np.float64
+
+        )
+
+
+        pesos_chunks.extend(
+
+            valores
+
+        )
+
+
+    peso_final = np.mean(
+
+        pesos_chunks
+
+    )
+
+
+    pesos_finales.append(
+
+        peso_final
+
+    )
+
+
+pesos_finales = np.asarray(
+
+    pesos_finales,
+
+    dtype=np.float64
+
+)
+
+
+# =====================================================================
+# 9. PREDICCIÓN FINAL LS-SVM
+# =====================================================================
+
+Y_score_final = X_claro_local @ pesos_finales
+
+Y_pred_clase_final = (
+    Y_score_final >= 0.0
+).astype(int)
+
+# La probabilidad no forma parte del entrenamiento LS-SVM. Se obtiene
+# únicamente para permitir ROC-AUC y Log-Loss en la comparación.
+Y_prob_final = 1.0 / (
+    1.0 + np.exp(-np.clip(Y_score_final, -50, 50))
+)
+Y_prob_final = np.clip(Y_prob_final, 1e-7, 1.0 - 1e-7)
+
+# =====================================================================
+# 10. MÉTRICAS FINALES
+# =====================================================================
+
+accuracy_final = accuracy_score(Y_target_clase, Y_pred_clase_final)
+precision_final = precision_score(Y_target_clase, Y_pred_clase_final, zero_division=0)
+recall_final = recall_score(Y_target_clase, Y_pred_clase_final, zero_division=0)
+f1_final = f1_score(Y_target_clase, Y_pred_clase_final, zero_division=0)
+auc_final = roc_auc_score(Y_target_clase, Y_score_final)
+
+log_loss_final = -np.mean(
+    Y_target_clase * np.log(Y_prob_final)
+    + (1.0 - Y_target_clase) * np.log(1.0 - Y_prob_final)
+)
+
+# Métricas auxiliares sobre la codificación binaria 0/1.
+mse_final = mean_squared_error(Y_target_clase, Y_prob_final)
+rmse_final = np.sqrt(mse_final)
+mae_final = mean_absolute_error(Y_target_clase, Y_prob_final)
+r2_final = r2_score(Y_target_clase, Y_prob_final)
+
+# ============================================================
+# MÓDULO ADICIONAL: ENTRENAMIENTO DEL MODELO CLÁSICO LS-SVM
+# ============================================================
+
+print()
+print("=" * 100)
+print("MÓDULO ADICIONAL: ENTRENAMIENTO DEL MODELO CLÁSICO LS-SVM")
+print("=" * 100)
+print()
+
+archivo_datos_clasicos = (
+    f"Datos_sinteticos/dataset_sintetico_{DATASET.lower()}.csv"
+)
+
+df_clasico = pd.read_csv(archivo_datos_clasicos)
+
+print(f"Archivo de datos originales: {archivo_datos_clasicos}")
+print(f"Registros cargados: {len(df_clasico):,}")
+print("Modelo: LS-SVM lineal, formulación primal")
+print(f"Gamma: {GAMMA}")
+print()
+
+X_clasico = df_clasico[
+    ["temp_ambiente", "num_personas", "eficiencia_maquina"]
+].to_numpy(dtype=np.float64)
+
+y_clasico_original = df_clasico["consumo_kwh"].to_numpy(dtype=np.float64)
+y_clasico = (y_clasico_original > umbral_consumo).astype(int)
+y_clasico_lssvm = np.where(y_clasico == 1, 1.0, -1.0)
+
+# LS-SVM lineal primal con bias no regularizado. Se resuelve mediante
+# ecuaciones normales regularizadas, evitando una matriz NxN. Esto permite
+# mantener el módulo clásico escalable para 1K, 10K, 100K, 500K y 1M.
+X_aug = np.column_stack((np.ones(len(X_clasico)), X_clasico))
+
+regularizacion = np.zeros((X_aug.shape[1], X_aug.shape[1]), dtype=np.float64)
+regularizacion[1:, 1:] = np.eye(X_aug.shape[1] - 1) / GAMMA
+
+tiempo_inicio_clasico = time.perf_counter()
+
+matriz = X_aug.T @ X_aug + regularizacion
+vector = X_aug.T @ y_clasico_lssvm
+
+try:
+    pesos_clasico = np.linalg.solve(matriz, vector)
+except np.linalg.LinAlgError:
+    pesos_clasico = np.linalg.pinv(matriz) @ vector
+
+score_clasico = X_aug @ pesos_clasico
+y_pred_clasico = (score_clasico >= 0.0).astype(int)
+y_prob_clasico = 1.0 / (
+    1.0 + np.exp(-np.clip(score_clasico, -50, 50))
+)
+y_prob_clasico = np.clip(y_prob_clasico, 1e-7, 1.0 - 1e-7)
+
+tiempo_fin_clasico = time.perf_counter()
+tiempo_entrenamiento_clasico = tiempo_fin_clasico - tiempo_inicio_clasico
+
+accuracy_clasico = accuracy_score(y_clasico, y_pred_clasico)
+precision_clasico = precision_score(y_clasico, y_pred_clasico, zero_division=0)
+recall_clasico = recall_score(y_clasico, y_pred_clasico, zero_division=0)
+f1_clasico = f1_score(y_clasico, y_pred_clasico, zero_division=0)
+auc_clasico = roc_auc_score(y_clasico, score_clasico)
+log_loss_clasico = -np.mean(
+    y_clasico * np.log(y_prob_clasico)
+    + (1.0 - y_clasico) * np.log(1.0 - y_prob_clasico)
+)
+
+df_metricas_clasico = pd.DataFrame({
+    "Métrica": ["Accuracy", "Precision", "Recall", "F1-score", "ROC-AUC", "Log-Loss"],
+    "Valor": [accuracy_clasico, precision_clasico, recall_clasico, f1_clasico, auc_clasico, log_loss_clasico]
+})
+
+mostrar_tabla(
+    "MÉTRICAS DEL MODELO CLÁSICO LS-SVM",
+    "Resultados obtenidos mediante un LS-SVM lineal clásico entrenado "
+    "directamente con las variables originales. Se utiliza la misma "
+    "transformación binaria por mediana que en el modelo QFT + CKKS. "
+    "Las etiquetas internas del LS-SVM son -1 y +1; para las métricas "
+    "se reportan como clases 0 y 1.",
+    df_metricas_clasico
+)
+
+print(f"Tiempo de entrenamiento clásico: {tiempo_entrenamiento_clasico:.6f} segundos")
+
+# ============================================================
+# TABLA COMPARATIVA: CLÁSICO VS. QFT + CKKS
+# ============================================================
+
+df_comparacion = pd.DataFrame({
+    "Modelo": ["Clásico", "QFT + CKKS"],
+    "Accuracy ↑": [accuracy_clasico, accuracy_final],
+    "Precision ↑": [precision_clasico, precision_final],
+    "Recall ↑": [recall_clasico, recall_final],
+    "F1-score ↑": [f1_clasico, f1_final],
+    "ROC-AUC ↑": [auc_clasico, auc_final],
+    "Log-Loss ↓": [log_loss_clasico, log_loss_final]
+})
+
+df_comparacion_formateada = df_comparacion.copy()
+
+for columna in [
+    "Accuracy ↑",
+    "Precision ↑",
+    "Recall ↑",
+    "F1-score ↑",
+    "ROC-AUC ↑",
+    "Log-Loss ↓"
+]:
+    df_comparacion_formateada[columna] = (
+        df_comparacion_formateada[columna]
+        .map(lambda x: f"{x:.8f}")
+    )
+
+mostrar_tabla(
+    "TABLA COMPARATIVA: MODELO CLÁSICO VS. QFT + CKKS",
+    "Compara el desempeño del LS-SVM clásico frente al LS-SVM basado "
+    "en QFT y CKKS. Accuracy, Precision, Recall y F1-score se "
+    "interpretan como métricas de desempeño, donde valores mayores "
+    "son mejores. ROC-AUC también es mejor cuanto mayor es su valor. "
+    "Log-Loss mide el error probabilístico derivado del score, por lo "
+    "que valores menores son mejores.",
+    df_comparacion_formateada
+)
+
+
+# =====================================================================
+# 11. RESULTADOS FINALES DEL MODELO
+# =====================================================================
+
+print()
+print("=" * 80)
+print("RESULTADOS FINALES DEL MODELO")
+print("=" * 80)
+
+
+# =====================================================================
+# TABLA 3
+# PESOS FINALES DEL MODELO
+# =====================================================================
+
+df_pesos = pd.DataFrame({
+
+    "Característica": FEATURES,
+
+    "Peso final": [
+
+        f"{peso:.10f}"
+
+        for peso in pesos_finales
+
+    ]
+
+})
+
+
+mostrar_tabla(
+
+    "TABLA 3. PESOS FINALES DEL MODELO LS-SVM CKKS",
+
+    "Presenta los pesos finales obtenidos después del entrenamiento "
+    "homomórfico. Cada peso representa la contribución de la variable "
+    "correspondiente en la ecuación de regresión utilizada para realizar "
+    "las predicciones.",
+
+    df_pesos
+
+)
+
+
+# =====================================================================
+# ECUACIÓN DEL MODELO
+# =====================================================================
+
+print()
+print("Ecuación del modelo:")
+print()
+
+print(
+
+    "f(x) = "
+
+    f"{pesos_finales[0]:.6f} + "
+
+    f"({pesos_finales[1]:.6f})·qft_f1 + "
+
+    f"({pesos_finales[2]:.6f})·qft_f2 + "
+
+    f"({pesos_finales[3]:.6f})·qft_f3"
+
+)
+
+
+# =====================================================================
+# 12. TABLA DE MÉTRICAS
+# =====================================================================
+
+df_metricas = pd.DataFrame({
+    "Métrica": [
+        "Accuracy",
+        "Precision",
+        "Recall",
+        "F1-score",
+        "ROC-AUC",
+        "Log-Loss"
+    ],
+    "Valor": [
+        accuracy_final,
+        precision_final,
+        recall_final,
+        f1_final,
+        auc_final,
+        log_loss_final
+    ]
+})
+
+mostrar_tabla(
+    "TABLA 4. MÉTRICAS DE EVALUACIÓN DEL MODELO",
+    "Presenta las métricas utilizadas para evaluar el desempeño "
+    "del LS-SVM entrenado mediante el esquema CKKS. "
+    "Accuracy, Precision, Recall, F1-score y ROC-AUC evalúan la "
+    "clasificación, mientras que Log-Loss evalúa la calidad de las probabilidades estimadas a partir del score LS-SVM.",
+    df_metricas
+)
+
+
+# =====================================================================
+# 13. GUARDAR TABLA DE MÉTRICAS EN CSV
+# =====================================================================
+
+archivo_metricas_csv = (
+
+    f"metricas_modelo_ckks_{DATASET}.csv"
+
+)
+
+
+df_metricas.to_csv(
+
+    archivo_metricas_csv,
+
+    index=False
+
+)
+
+
+# =====================================================================
+# 14. GENERAR TABLA LATEX
+# =====================================================================
+
+df_metricas_latex = df_metricas.copy()
+
+
+df_metricas_latex["Valor"] = (
+
+    df_metricas_latex["Valor"]
+
+    .map(lambda x: f"{x:.8f}")
+
+)
+
+
+tabla_latex = df_metricas_latex.to_latex(
+
+    index=False,
+
+    escape=False
+
+)
+
+
+archivo_metricas_latex = (
+
+    f"metricas_modelo_ckks_{DATASET}.tex"
+
+)
+
+
+with open(
+
+    archivo_metricas_latex,
+
+    "w",
+
+    encoding="utf-8"
+
+) as f:
+
+    f.write(tabla_latex)
+
+
+print()
+print(
+
+    f"[+] Tabla CSV guardada en: "
+
+    f"{archivo_metricas_csv}"
+
+)
+
+
+print(
+
+    f"[+] Tabla LaTeX guardada en: "
+
+    f"{archivo_metricas_latex}"
+
+)
+
+
+# =====================================================================
+# 15. TABLA DE EJEMPLOS DE PREDICCIÓN
+# =====================================================================
+
+np.random.seed(42)
+
+cantidad_muestras = min(
+    10,
+    numero_registros
+)
+
+indices = np.random.choice(
+    numero_registros,
+    cantidad_muestras,
+    replace=False
+)
+
+indices.sort()
+
+datos_prediccion = []
+
+for indice in indices:
+
+    clase_real = int(Y_target_clase[indice])
+    probabilidad = Y_prob_final[indice]
+    clase_predicha = int(Y_pred_clase_final[indice])
+
+    datos_prediccion.append({
+        "Índice": indice,
+        "Clase real": clase_real,
+        "Score LS-SVM": Y_score_final[indice],
+        "Probabilidad clase 1": probabilidad,
+        "Clase predicha": clase_predicha
+    })
+
+df_predicciones = pd.DataFrame(
+    datos_prediccion
+)
+
+mostrar_tabla(
+    "TABLA 5. EJEMPLOS DE PREDICCIÓN DEL MODELO",
+    "Presenta una muestra de diez registros seleccionados aleatoriamente "
+    "para comparar la clase real con la probabilidad estimada de pertenencia a la clase 1, el score de decisión "
+    "y la clase predicha. La clasificación LS-SVM se realiza mediante "
+    "el umbral score = 0.",
+    df_predicciones
+)
+
+
+# =====================================================================
+# 16. GRÁFICO 1
+# EVOLUCIÓN DE LA FUNCIÓN OBJETIVO LS-SVM
+# =====================================================================
+
+print()
+print("=" * 100)
+print("GRÁFICO 1. EVOLUCIÓN DE LA FUNCIÓN OBJETIVO LS-SVM DURANTE EL ENTRENAMIENTO CKKS")
+print("=" * 100)
+print()
+print(
+    "Descripción: Este gráfico muestra la evolución de la función objetivo "
+    "LS-SVM durante las épocas de entrenamiento. Su finalidad es evaluar "
+    "la convergencia del algoritmo y observar la reducción progresiva del "
+    "error cuadrático regularizado durante el proceso de optimización."
+)
+
+plt.figure(figsize=(10, 6))
+plt.plot(range(1, EPOCHS + 1), historial_loss, linewidth=2)
+plt.xlabel("Época")
+plt.ylabel("Función objetivo LS-SVM")
+plt.title(f"Gráfico 1. Evolución de la función objetivo LS-SVM - {DATASET}")
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+archivo_grafico_1 = f"grafico_1_loss_lssvm_{DATASET}.png"
+plt.savefig(archivo_grafico_1, dpi=300)
+plt.show()
+
+# =====================================================================
+# 17. GRÁFICO 2
+# CLASES REALES VS. SCORES / PROBABILIDADES
+# =====================================================================
+
+print()
+print("=" * 100)
+print("GRÁFICO 2. CLASES REALES VS. SCORES PREDICHOS LS-SVM")
+print("=" * 100)
+print()
+print(
+    "Descripción: Este gráfico compara las clases reales con el score de "
+    "decisión producido por el LS-SVM. El valor cero representa la frontera "
+    "de clasificación: scores negativos corresponden a la clase 0 y scores "
+    "positivos a la clase 1. La probabilidad mostrada es únicamente una "
+    "transformación logística del score para facilitar la interpretación."
+)
+
+plt.figure(figsize=(10, 6))
+plt.scatter(Y_target_clase, Y_score_final, alpha=0.5)
+plt.axhline(y=0.0, linewidth=2, linestyle="--", label="Frontera LS-SVM (score = 0)")
+plt.xlabel("Clase real")
+plt.ylabel("Score de decisión LS-SVM")
+plt.title(f"Gráfico 2. Clases reales vs. scores predichos - {DATASET}")
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+archivo_grafico_2 = f"grafico_2_real_vs_predicho_lssvm_{DATASET}.png"
+plt.savefig(archivo_grafico_2, dpi=300)
+plt.show()
+
+# =====================================================================
+# 18. GRÁFICO 3
+# FUNCIÓN DE DECISIÓN LS-SVM
+# =====================================================================
+
+indice_qft_f1 = FEATURES.index("qft_f1")
+indice_qft_f2 = FEATURES.index("qft_f2")
+indice_qft_f3 = FEATURES.index("qft_f3")
+
+qft_f1_min = X_claro_local[:, indice_qft_f1].min()
+qft_f1_max = X_claro_local[:, indice_qft_f1].max()
+qft_f1_grid = np.linspace(qft_f1_min, qft_f1_max, 200)
+qft_f2_media = np.mean(X_claro_local[:, indice_qft_f2])
+qft_f3_media = np.mean(X_claro_local[:, indice_qft_f3])
+
+score_regresion = (
+    pesos_finales[0]
+    + pesos_finales[1] * qft_f1_grid
+    + pesos_finales[2] * qft_f2_media
+    + pesos_finales[3] * qft_f3_media
+)
+
+print()
+print("=" * 100)
+print("GRÁFICO 3. FUNCIÓN DE DECISIÓN LS-SVM APRENDIDA")
+print("=" * 100)
+print()
+print(
+    "Descripción: Este gráfico representa la función de decisión lineal "
+    "aprendida por el LS-SVM en función de qft_f1, manteniendo qft_f2 y "
+    "qft_f3 en sus valores medios. El cruce con score = 0 representa "
+    "la frontera de decisión entre las dos clases."
+)
+
+plt.figure(figsize=(10, 6))
+plt.scatter(
+    X_claro_local[:, indice_qft_f1],
+    Y_target_lssvm,
+    alpha=0.25,
+    label="Clases reales (-1 / +1)"
+)
+plt.plot(qft_f1_grid, score_regresion, linewidth=3, label="Función de decisión LS-SVM")
+plt.axhline(y=0.0, linewidth=2, linestyle="--", label="Frontera score = 0")
+plt.xlabel("qft_f1")
+plt.ylabel("Score de decisión LS-SVM")
+plt.title(f"Gráfico 3. Función de decisión LS-SVM aprendida - {DATASET}")
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+archivo_grafico_3 = f"grafico_3_funcion_decision_lssvm_{DATASET}.png"
+plt.savefig(archivo_grafico_3, dpi=300)
+plt.show()
+
+# =====================================================================
+# 19. GRÁFICO 4
+# RESIDUOS LS-SVM
+# =====================================================================
+
+residuos = Y_target_lssvm - Y_score_final
+
+print()
+print("=" * 100)
+print("GRÁFICO 4. ANÁLISIS DE RESIDUOS LS-SVM")
+print("=" * 100)
+print()
+print(
+    "Descripción: Este gráfico representa los residuos del LS-SVM en "
+    "función de los scores predichos. Permite identificar patrones "
+    "sistemáticos en los errores y observar si los residuos se distribuyen "
+    "alrededor de cero."
+)
+
+plt.figure(figsize=(10, 6))
+plt.scatter(Y_score_final, residuos, alpha=0.5)
+plt.axhline(y=0, linewidth=2)
+plt.xlabel("Score de decisión LS-SVM")
+plt.ylabel("Residuos: y - f(x)")
+plt.title(f"Gráfico 4. Análisis de residuos LS-SVM - {DATASET}")
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+archivo_grafico_4 = f"grafico_4_residuos_lssvm_{DATASET}.png"
+plt.savefig(archivo_grafico_4, dpi=300)
+plt.show()
+
+# =====================================================================
+# 20. GRÁFICO 5
+# DISTRIBUCIÓN DE ERRORES LS-SVM
+# =====================================================================
+
+errores = Y_target_lssvm - Y_score_final
+
+print()
+print("=" * 100)
+print("GRÁFICO 5. DISTRIBUCIÓN DE LOS ERRORES LS-SVM")
+print("=" * 100)
+print()
+print(
+    "Descripción: Este gráfico muestra la distribución de los errores "
+    "del LS-SVM. Permite analizar la dispersión de los errores, observar "
+    "su concentración alrededor de cero e identificar posibles valores "
+    "atípicos o registros alejados de la frontera de decisión."
+)
+
+plt.figure(figsize=(10, 6))
+plt.hist(errores, bins=30, alpha=0.8)
+plt.axvline(x=0, linewidth=2)
+plt.xlabel("Error LS-SVM: y - f(x)")
+plt.ylabel("Frecuencia")
+plt.title(f"Gráfico 5. Distribución de los errores LS-SVM - {DATASET}")
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+archivo_grafico_5 = f"grafico_5_distribucion_errores_lssvm_{DATASET}.png"
+plt.savefig(archivo_grafico_5, dpi=300)
+plt.show()
+
+# =====================================================================
+# 21. RESUMEN DE GRÁFICOS
+# =====================================================================
+
+print()
+print("=" * 80)
+print("GRÁFICOS GENERADOS")
+print("=" * 80)
+
+print()
+
+print(
+
+    f"[+] Gráfico 1: {archivo_grafico_1}"
+
+)
+
+
+print(
+
+    f"[+] Gráfico 2: {archivo_grafico_2}"
+
+)
+
+
+print(
+
+    f"[+] Gráfico 3: {archivo_grafico_3}"
+
+)
+
+
+print(
+
+    f"[+] Gráfico 4: {archivo_grafico_4}"
+
+)
+
+
+print(
+
+    f"[+] Gráfico 5: {archivo_grafico_5}"
+
+)
+
+
+# =====================================================================
+# 22. GUARDAR RESULTADO COMPLETO
+# =====================================================================
+
+archivo_resultados = f"resultados_entrenamiento_lssvm_{DATASET}.txt"
+
+with open(archivo_resultados, "w", encoding="utf-8") as f:
+    f.write("RESULTADOS DEL ENTRENAMIENTO LS-SVM CKKS\n")
+    f.write("=" * 70 + "\n")
+    f.write(f"Dataset: {DATASET}\n")
+    f.write(f"Registros: {numero_registros}\n")
+    f.write(f"Chunks: {numero_chunks}\n")
+    f.write(f"Learning rate: {LR}\n")
+    f.write(f"Epochs: {EPOCHS}\n")
+    f.write(f"Gamma: {GAMMA}\n")
+    f.write("Tipo de LS-SVM: lineal, formulación primal\n\n")
+
+    f.write("PESOS FINALES\n")
+    f.write("-" * 70 + "\n")
+    for feature, peso in zip(FEATURES, pesos_finales):
+        f.write(f"{feature} = {peso:.10f}\n")
+
+    f.write("\nMODELO\n")
+    f.write("-" * 70 + "\n")
+    f.write(
+        "f(x) = "
+        f"{pesos_finales[0]:.10f} + "
+        f"({pesos_finales[1]:.10f})*qft_f1 + "
+        f"({pesos_finales[2]:.10f})*qft_f2 + "
+        f"({pesos_finales[3]:.10f})*qft_f3\n"
+    )
+
+    f.write("\nMÉTRICAS\n")
+    f.write("-" * 70 + "\n")
+    f.write(f"Accuracy = {accuracy_final:.10f}\n")
+    f.write(f"Precision = {precision_final:.10f}\n")
+    f.write(f"Recall = {recall_final:.10f}\n")
+    f.write(f"F1-score = {f1_final:.10f}\n")
+    f.write(f"ROC-AUC = {auc_final:.10f}\n")
+    f.write(f"Log-Loss = {log_loss_final:.10f}\n")
+    f.write(f"MSE auxiliar = {mse_final:.10f}\n")
+    f.write(f"RMSE auxiliar = {rmse_final:.10f}\n")
+    f.write(f"MAE auxiliar = {mae_final:.10f}\n")
+    f.write(f"R2 auxiliar = {r2_final:.10f}\n\n")
+    f.write(f"Tiempo entrenamiento = {tiempo_entrenamiento:.6f} segundos\n")
+
+print()
+print(f"[+] Resultado completo guardado en: {archivo_resultados}")
+
+# =====================================================================
+# 23. FINAL
+# =====================================================================
+
+print()
+print("=" * 80)
+print("PROCESAMIENTO LS-SVM FINALIZADO CORRECTAMENTE")
+print("=" * 80)
 ```
 
 </details>
