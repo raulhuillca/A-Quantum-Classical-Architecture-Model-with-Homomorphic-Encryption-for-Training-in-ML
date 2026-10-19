@@ -8932,47 +8932,6 @@ print("=" * 80)
 ##### 4.3. Resultados: Tablas
 ##### 4.4. Resultados: Figuras
 
-La arquitectura experimental del MLP es:
-
-```plaintext
-   Entrada
-      │
-      ▼
-  3 neuronas
-      │
-      ▼
-  4 neuronas
-      │
-      ▼
-   1 salida
-```
-### 🧪 Configuración Experimental
-
-La comparación experimental evalúa dos configuraciones principales:
-
-**Configuración A**
-
-```plaintext
-Representación Espacial Clásica
-               │
-               ▼
-     Aprendizaje Automático
-```
-
-**Configuración B**
-
-```plaintext
-Representación de Frecuencia QFT
-               │
-               ▼
-       Encriptación CKKS
-               │
-               ▼
-     Aprendizaje Automático
-```
-
-Se utilizan los mismos conjuntos de datos y condiciones experimentales controladas siempre que sea posible.
-
 ### 📈 Métricas de Evaluación
 
 #### Métricas de Regresión
