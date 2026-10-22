@@ -8930,7 +8930,6 @@ Los experimentos se llevaron a cabo utilizando el siguiente entorno computaciona
 - **Sistema Operativo:** Ubuntu 24.04.4 LTS
 - **CUDA:** CUDA 11.8
 - **Stack de Software:** Python 3.12, Qiskit 1.1.1, Qiskit Aer 0.15.1, TenSEAL 0.3.16, Microsoft SEAL, NumPy, Pandas, Scikit-learn, Matplotlib
-
 ## 🏛️ Estructura del Portafolio: Criterio 8 - Apoyo Institucional
 
 El siguiente diagrama ilustra la organización y el flujo de trabajo para la recopilación de evidencias exigidas por ICACIT (Ciclo 2027), divididas en documentos normativos, registros de ejecución, aspectos complementarios y la gestión de riesgos inherentes al proceso.
@@ -8938,46 +8937,6 @@ El siguiente diagrama ilustra la organización y el flujo de trabajo para la rec
 El flujo de trabajo y asignación de responsabilidades es:
 
 ```mermaid
-graph TD
-    A[🎓 Comité de Acreditación ICACIT 2027] --> B[📋 Portafolio Criterio 8: Apoyo Institucional]
-
-    B --> C[📜 4.1 Documentos Normativos]
-    B --> D[📂 4.2 Registros y Ejecución]
-    B --> E[🧩 Autoestudio]
-    B --> F[⚠️ Gestión de Riesgos]
-
-    subgraph Normativos [Documentos Normativos y Políticas]
-        C --> C1[🤝 P1: Inclusión, RSU y Defensoría <br/> *Resp: Raúl*]
-        C --> C2[💰 P2: Presupuestos Operativos <br/> *Resp: Guzmán*]
-        C --> C3[💻 P3: Fondos Equipamiento y TIC <br/> *Resp: Dario*]
-        C --> C4[🎓 P4: Plan Capacitación Docente <br/> *Resp: Doris*]
-    end
-
-    subgraph Registros [Registros de Evidencia 2026]
-        D --> D1[🎯 P5: Plan Desarrollo 2032 <br/> *Resp: Raúl*]
-        D --> D2[👤 P6: Récord Histórico Director <br/> *Resp: Guzmán*]
-        D --> D3[🔬 P7: Evidencia Fondos Laboratorios <br/> *Resp: Dario*]
-        D --> D4[✈️ P8: Evidencia Viajes e Intercambios <br/> *Resp: Doris*]
-    end
-
-    subgraph Complementarios [Aspectos Complementarios]
-        E --> E1[👥 Gestión del Personal Administrativo]
-        E --> E2[👨‍🏫 Contratación y Retención Docente]
-        E --> E3[💵 Sostenibilidad Financiera del Programa]
-    end
-
-    subgraph Riesgos [Riesgos y Cuellos de Botella]
-        F --> F1[⏳ Horizonte PEI menor a 6 años]
-        F --> F2[📝 Insuficiencia de registros formales 2026]
-        F --> F3[🔎 Fondos no específicos a Informática]
-        F --> F4[🐢 Demoras en áreas administrativas]
-    end
-    
-    %% Conexiones de dependencias transversales
-    C1 -.-> D1
-    C3 -.-> D3
-    C4 -.-> D4
-
 graph TD
     A[🎓 Comité de Acreditación ICACIT 2027] --> B[📋 Portafolio Criterio 8: Apoyo Institucional]
 
