@@ -8978,86 +8978,42 @@ graph TD
     C3 -.-> D3
     C4 -.-> D4
 
-
-## 🔬 Diagrama Detallado de Flujo y Evidencias: Criterio 8
-
-El siguiente esquema desglosa los componentes específicos, normativas, y evidencias operativas que conforman cada punto del Criterio 8, mostrando la relación entre la planificación (Normativos) y su ejecución real en 2026 (Registros).
-
-```mermaid
 graph TD
-    %% Nodo Principal
-    ROOT((**Criterio 8**<br/>Apoyo Institucional)) 
+    A[🎓 Comité de Acreditación ICACIT 2027] --> B[📋 Portafolio Criterio 8: Apoyo Institucional]
 
-    %% Ejes principales
-    ROOT ==> EJE1[📂 4.1 Documentos Normativos]
-    ROOT ==> EJE2[📊 4.2 Registros y Evidencias]
+    B --> C[📜 4.1 Documentos Normativos]
+    B --> D[📂 4.2 Registros y Ejecución]
+    B --> E[🧩 Autoestudio]
+    B --> F[⚠️ Gestión de Riesgos]
 
-    %% ----------------------------------------------------
-    %% SUBGRAPH: NORMATIVOS
-    %% ----------------------------------------------------
-    subgraph Normativos [Dimensión Estratégica y Normativa]
-        
-        %% Punto 1 (Raúl)
-        EJE1 --> P1[**P1. Inclusión y RSU** <br/>*(Raúl)*]
-        P1 --> P1_A(Políticas: RSU, Inclusión y Género)
-        P1 --> P1_B(Programa: Psico K'anchasun)
-        P1 --> P1_C(Reglamento: Hostigamiento Sexual)
-        P1_C -.-> Defensoria[Integración: Red Iberoamericana de Defensorías]
-
-        %% Punto 2 (Guzmán)
-        EJE1 --> P2[**P2. Presupuestos Operativos** <br/>*(Guzmán)*]
-        P2 --> P2_A(Ejecución 2025: Personal y Bienes)
-        P2 --> P2_B(Ejecución 2026: Docencia Universitaria)
-
-        %% Punto 3 (Dario)
-        EJE1 --> P3[**P3. Políticas TIC y Equipos** <br/>*(Dario)*]
-        P3 --> P3_A(Plan Gobierno Digital 2024-2026)
-        P3 --> P3_B(Brecha: Falta directiva de Programa)
-        P3_B --> P3_C(Propuesta: Lineamientos de inventario y renovación)
-
-        %% Punto 4 (Doris)
-        EJE1 --> P4[**P4. Plan Capacitación Docente** <br/>*(Doris)*]
-        P4 --> P4_A(Plan Anual: Resol. CU-583-2026)
-        P4 --> P4_B(Reglamentos: Año Sabático y Movilidad)
+    subgraph Normativos [Documentos Normativos y Políticas]
+        C --> C1[🤝 P1: Inclusión, RSU y Defensoría <br/> *Resp: Raúl*]
+        C --> C2[💰 P2: Presupuestos Operativos <br/> *Resp: Guzmán*]
+        C --> C3[💻 P3: Fondos Equipamiento y TIC <br/> *Resp: Dario*]
+        C --> C4[🎓 P4: Plan Capacitación Docente <br/> *Resp: Doris*]
     end
 
-    %% ----------------------------------------------------
-    %% SUBGRAPH: REGISTROS
-    %% ----------------------------------------------------
-    subgraph Registros [Dimensión Operativa y Evidencias 2026]
-        
-        %% Punto 5 (Raúl)
-        EJE2 --> P5[**P5. Plan Estratégico** <br/>*(Raúl)*]
-        P5 --> P5_A{Brecha detectada:<br/>PEI culmina en 2030}
-        P5_A -->|Acción Correctiva| P5_B([Formulación: Plan de Desarrollo 2032])
-
-        %% Punto 6 (Guzmán)
-        EJE2 --> P6[**P6. Récord Director** <br/>*(Guzmán)*]
-        P6 --> P6_A(Recopilación cronológica de Resoluciones)
-        P6 --> P6_B(MOF y Estatuto de responsabilidades)
-
-        %% Punto 7 (Dario)
-        EJE2 --> P7[**P7. Fondos Laboratorios 2026** <br/>*(Dario)*]
-        P7 --> P7_A(Antecedente: IOARR 2024 - 4.72M)
-        P7 --> P7_B(Gestión actual: Expediente 26091108)
-        P7_B -.-> P7_C>Pendiente: Reporte Subunidad Ejecución Presupuestal]
-
-        %% Punto 8 (Doris)
-        EJE2 --> P8[**P8. Evidencias Capacitación 2026** <br/>*(Doris)*]
-        P8 --> P8_A(Certificados y Asistencias 2026)
-        P8_A --> P8_B[Taller: Procesamiento de Imagen]
-        P8_A --> P8_C[Taller: Visión Computacional]
-        P8 --> P8_D>Pendiente: Identificar docentes sin capacitación]
+    subgraph Registros [Registros de Evidencia 2026]
+        D --> D1[🎯 P5: Plan Desarrollo 2032 <br/> *Resp: Raúl*]
+        D --> D2[👤 P6: Récord Histórico Director <br/> *Resp: Guzmán*]
+        D --> D3[🔬 P7: Evidencia Fondos Laboratorios <br/> *Resp: Dario*]
+        D --> D4[✈️ P8: Evidencia Viajes e Intercambios <br/> *Resp: Doris*]
     end
 
-    %% Relaciones transversales lógicas (Cómo la norma alimenta la evidencia)
-    P1_A -.-> P5_B
-    P3_A -.-> P7_A
-    P4_A -.-> P8_A
+    subgraph Complementarios [Aspectos Complementarios]
+        E --> E1[👥 Gestión del Personal Administrativo]
+        E --> E2[👨‍🏫 Contratación y Retención Docente]
+        E --> E3[💵 Sostenibilidad Financiera del Programa]
+    end
+
+    subgraph Riesgos [Riesgos y Cuellos de Botella]
+        F --> F1[⏳ Horizonte PEI menor a 6 años]
+        F --> F2[📝 Insuficiencia de registros formales 2026]
+        F --> F3[🔎 Fondos no específicos a Informática]
+        F --> F4[🐢 Demoras en áreas administrativas]
+    end
     
-    %% Estilos (Opcional, para dar color al diagrama en renderizadores compatibles)
-    classDef urgentes fill:#ffe6e6,stroke:#ff0000,stroke-width:2px;
-    class P5_A,P7_C,P8_D urgentes;
-    
-    classDef hitos fill:#e6ffe6,stroke:#008000,stroke-width:2px;
-    class Defensoria,P5_B hitos;
+    %% Conexiones de dependencias transversales
+    C1 -.-> D1
+    C3 -.-> D3
+    C4 -.-> D4
