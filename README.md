@@ -8978,6 +8978,7 @@ graph TD
     C3 -.-> D3
     C4 -.-> D4
 
+
 ## 🔬 Diagrama Detallado de Flujo y Evidencias: Criterio 8
 
 El siguiente esquema desglosa los componentes específicos, normativas, y evidencias operativas que conforman cada punto del Criterio 8, mostrando la relación entre la planificación (Normativos) y su ejecución real en 2026 (Registros).
