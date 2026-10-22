@@ -8931,3 +8931,108 @@ Los experimentos se llevaron a cabo utilizando el siguiente entorno computaciona
 - **CUDA:** CUDA 11.8
 - **Stack de Software:** Python 3.12, Qiskit 1.1.1, Qiskit Aer 0.15.1, TenSEAL 0.3.16, Microsoft SEAL, NumPy, Pandas, Scikit-learn, Matplotlib
 
+# 🎓 Portafolio de Evidencias - Criterio 8: Apoyo Institucional (ICACIT 2027)
+
+**Universidad Nacional de San Antonio Abad del Cusco (UNSAAC)**  
+**Facultad:** Ingeniería Eléctrica, Electrónica, Informática y Mecánica  
+**Escuela Profesional:** Ingeniería Informática  
+
+---
+
+## 📄 Datos del Informe
+* **N.° de Informe:** 001-2026-C8
+* **Fecha:** Cusco, 25 de septiembre de 2026
+* **Dirigido a:** Dr. Emilio Palomino Olivera (Presidente del Comité de Acreditación)
+* **Elaborado por:** Mgt. Doris Sabina Aguirre Carbajal (Responsable del Criterio 8)
+* **Asunto:** Plan de trabajo y estado de avance del portafolio de evidencias del Criterio 8 – Apoyo Institucional
+
+---
+
+## 📑 Resumen Ejecutivo
+Informe detallado sobre el plan de trabajo y el estado de avance de las actividades orientadas a reunir las evidencias del **Criterio 8 – Apoyo Institucional**, conforme a lo establecido por ICACIT para el proceso de acreditación del ciclo 2027.
+
+---
+
+## 📊 Estado de Avance por Puntos del Portafolio
+
+### 4.1 Documentos Normativos
+
+#### 📍 Punto 1: Políticas de Educación Inclusiva y Responsabilidad Social (Responsable: Raúl)
+Se cuenta con políticas vigentes aprobadas por resolución sobre Responsabilidad Social Universitaria (RSU), inclusión, y atención a personas con discapacidad e igualdad de género. [Ver Documentos](https://drive.google.com/file/d/1ltRpy9KVNwXXrGhsNLNu_oPQtIXp30ga/view?usp=drive_link)
+
+**Proyecto Destacado: Psico K'anchasun**
+* **Objetivo:** Acortar la brecha de acceso a la salud mental con atención gratuita y talleres.
+* **Lanzamiento:** 14 de septiembre de 2026.
+* **Alcance:** Quispicanchi, Calca, Paruro, Anta, Paucartambo, Canas, Canchis y Espinar.
+
+**Resoluciones de Voluntariado y Actividades:**
+| N.º | Fecha | Actividad | Población Destinataria | Documento Oficial |
+|---|---|---|---|---|
+| 1 | 21/02/2025 | Reconocimiento Junta Directiva del Voluntariado Ambiental 24-25 | Comunidad universitaria y región Cusco | R-204-2025-UNSAAC |
+| 2 | Jun 2025 | Saludo institucional por Fiestas Jubilares del Cusco | Comunidad y ciudadanía | R-609-2025-UNSAAC |
+| 3 | 22/05/2026 | Reconocimiento Junta Directiva del Voluntariado Ambiental 26-27 | Comunidad universitaria y región Cusco | R-689-2026-UNSAAC |
+
+**Hostigamiento Sexual y Defensoría Universitaria:**
+El reglamento se alinea con las directrices del MIMP. A 2026, se registraron 26 denuncias formales y 14 casos judicializados. Además, el 28 de septiembre de 2026, la UNSAAC se integró a la Red Iberoamericana de Defensorías Universitarias. [Ver Reglamento](https://drive.google.com/file/d/1ercDpRE3M91I6XVmzVFzGPsgcrB_-L_u/view?usp=drive_link)
+
+| N.º | Fecha | Finalidad | Documento Oficial |
+|---|---|---|---|
+| 1 | 29/05/2025 | Aprobó el Reglamento para Prevención y Sanción | CU-237-2025-UNSAAC |
+| 2 | 06/10/2025 | Reconformó el Tribunal Disciplinario | CU-690-2025-UNSAAC |
+| 3 | 04/05/2026 | Aprobó el Reglamento de Prevención | CU-191-2026-UNSAAC |
+| 4 | 27/05/2026 | Reglamento oficial establecido | CU-191-2026-UNSAAC |
+
+**Inclusión:** Proceso de admisión especial para personas con discapacidad (19/07/2025) bajo la resolución R-681-2025-UNSAAC.
+
+#### 📍 Punto 2: Presupuestos Operativos y su Ejecución (Responsable: Guzmán)
+* **2025:** Gastos vinculados principalmente a personal, obligaciones sociales, bienes y servicios, orientados al sostenimiento académico. [Carpeta de Evidencias](https://drive.google.com/drive/folders/1r9uie2svOPrPCV22D8sBYAgOMKyq3TuZ)
+* **2026:** Ejecución principal en ejercicio de la docencia universitaria. Se cuenta con presupuesto autorizado para capacitación docente. [Carpeta de Evidencias](https://drive.google.com/drive/folders/1r9uie2svOPrPCV22D8sBYAgOMKyq3TuZ)
+
+#### 📍 Punto 3: Políticas de Asignación de Fondos para Equipamiento y Software (Responsable: Dario)
+* **Situación:** Existen políticas TIC (CU-184-2024) y un Plan de Gobierno Digital 2024-2026 (CU-183-2024). Faltan directivas específicas del Programa para renovación y mantenimiento.
+* **Propuesta:** Formalizar lineamientos integrados (inventario anual, criterios de prioridad, calendario de renovación de licencias) vinculados al POI y presupuesto. 
+
+#### 📍 Punto 4: Planes de Capacitación y Desarrollo Docente (Responsable: Doris)
+Aprobación del plan de capacitación mediante la Resolución N° CU-583-2026-UNSAAC para 39 unidades académicas. [Carpeta Principal](https://drive.google.com/drive/u/0/folders/1l6dfJkZ8DFLFicagZkQXQ8obd0BZRKdL)
+
+**Eventos y Resoluciones Destacadas:**
+* Ponencia en el 41st SIMPOSIO BRASILERO DE BANCO DE DADOS (Dr. Harley Vera Olivera) - R. CU-473-2026.
+* IX CONGRESO INTERNACIONAL DE INGENIERÍA DE SISTEMAS — CIIS - R. R-1638-2026.
+* Taller de Procesamiento de Imagen - R. R-1433-2026.
+* Taller de Redacción de Artículos Científicos - R. D-4341-2026.
+* Taller de Actualización en Visión Computacional Moderna - R. D-4342-2026.
+* Reglamentos de movilidad (CU-349-2026) y año sabático (CU-158-2020).
+
+---
+
+### 4.2 Registros
+
+#### 📍 Punto 5: Plan Estratégico (Responsable: Raúl)
+El PEI actual 2024-2030 (R-1149-2024-UNSAAC) **no cubre** el horizonte exigido por ICACIT (2032).
+* **Acción Correctiva:** Formulación del *Plan de Desarrollo del Programa de Estudios (2024-2032)*, a ser validado por la Oficina de Gestión de la Calidad y aprobado por el Consejo de Facultad.
+
+#### 📍 Punto 6: Récord Histórico del Director de Programa (Responsable: Guzmán)
+En proceso de recopilación cronológica de resoluciones de designación/elección y adjuntando el MOF y reglamentos de funciones correspondientes.
+
+#### 📍 Punto 7: Evidencias de Fondos para Equipos y Laboratorios 2026 (Responsable: Dario)
+Solicitud presupuestal derivada a la Subunidad de Ejecución Presupuestal. Queda pendiente obtener el reporte final 2026, las órdenes de Logística y actualizar el inventario de laboratorios. 
+
+#### 📍 Punto 8: Evidencias de Capacitación e Intercambios 2026 (Responsable: Doris)
+* Taller de Procesamiento de Imagen (Certificados).
+* Taller de Actualización en Visión Computacional (Listas de asistencia).
+* Identificación de docentes sin actividades en 2026 en curso. [Evidencias](https://drive.google.com/drive/u/0/folders/1FFnhFvdXPYzw1-ufqnp7lDpE9WyRMc62)
+
+---
+
+## 🧩 Aspectos Complementarios (Cuestionario de Autoestudio)
+* Personal administrativo, técnico y de apoyo asignado al programa.
+* Reglamento de concurso para contratación, convocatorias y estrategias de retención docente.
+* Gestión de recursos financieros para funcionamiento y sostenibilidad.
+
+---
+
+## ⚠️ Riesgos Identificados
+1. El PEI vigente no cubre el horizonte de seis años exigido (hasta 2032).
+2. Insuficiencia o falta de registros formales en capacitación/intercambios 2026.
+3. Dificultad para identificar fondos asignados *específicamente* al programa de Informática.
+4. Demoras en áreas administrativas para la entrega de documentación (ej. presupuestos).
