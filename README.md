@@ -8976,12 +8976,13 @@ graph TD
     C1 -.-> D1
     C3 -.-> D3
     C4 -.-> D4
+```
 
-flowchart TD
+
+graph TD
     Inicio([Inicio: Portafolio Criterio 8 - ICACIT 2027]) --> Fase1
 
     subgraph Fase1 [Fase 1: Normativas y Planificación Estratégica]
-        direction TB
         P1["Punto 1: Recopilar doc. normativos (RSU, Inclusión, Hostigamiento)"]
         P6["Punto 6: Registrar histórico de Directores (2023 - Actual)"]
         P5["Punto 5: Evaluar Plan Estratégico Institucional (PEI)"]
@@ -9001,7 +9002,6 @@ flowchart TD
     FinFase1 --> Fase2
 
     subgraph Fase2 [Fase 2: Presupuestos y Equipamiento]
-        direction TB
         P2["Punto 2: Analizar ejecución presupuestal (2025-2026)"]
         P3["Punto 3: Formalizar lineamientos de equipamiento y licencias"]
         P7["Punto 7: Evidenciar fondos para laboratorios 2026"]
@@ -9018,7 +9018,6 @@ flowchart TD
     FinFase2 --> Fase3
 
     subgraph Fase3 [Fase 3: Desarrollo y Capacitación Docente]
-        direction TB
         P4["Punto 4: Documentar planes de capacitación y reglamentos de movilidad"]
         P8["Punto 8: Reunir certificados y resoluciones (2026)"]
         
@@ -9033,7 +9032,6 @@ flowchart TD
     FinFase3 --> Fase4
 
     subgraph Fase4 [Fase 4: Aspectos Complementarios y Cierre]
-        direction TB
         C1["Describir funciones y capacitación del personal administrativo/técnico"]
         C2["Adjuntar reglamentos de contratación, promoción y retención docente"]
         C3["Describir gestión financiera para sostenibilidad"]
@@ -9050,5 +9048,3 @@ flowchart TD
     style Cond1 fill:#f57c00,stroke:#fff,color:#fff
     style Cond2 fill:#f57c00,stroke:#fff,color:#fff
     style Cond3 fill:#f57c00,stroke:#fff,color:#fff
-
-
