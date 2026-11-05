@@ -8976,9 +8976,9 @@ graph TD
     C1 -.-> D1
     C3 -.-> D3
     C4 -.-> D4
+
 ```
-
-
+```
 graph TD
     Inicio([Inicio: Portafolio Criterio 8 - ICACIT 2027]) --> Fase1
 
@@ -9048,3 +9048,4 @@ graph TD
     style Cond1 fill:#f57c00,stroke:#fff,color:#fff
     style Cond2 fill:#f57c00,stroke:#fff,color:#fff
     style Cond3 fill:#f57c00,stroke:#fff,color:#fff
+```
