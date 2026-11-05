@@ -8930,6 +8930,7 @@ Los experimentos se llevaron a cabo utilizando el siguiente entorno computaciona
 - **Sistema Operativo:** Ubuntu 24.04.4 LTS
 - **CUDA:** CUDA 11.8
 - **Stack de Software:** Python 3.12, Qiskit 1.1.1, Qiskit Aer 0.15.1, TenSEAL 0.3.16, Microsoft SEAL, NumPy, Pandas, Scikit-learn, Matplotlib
+
 ## 🏛️ Estructura del Portafolio: Criterio 8 - Apoyo Institucional
 
 El siguiente diagrama ilustra la organización y el flujo de trabajo para la recopilación de evidencias exigidas por ICACIT (Ciclo 2027), divididas en documentos normativos, registros de ejecución, aspectos complementarios y la gestión de riesgos inherentes al proceso.
@@ -8978,9 +8979,10 @@ graph TD
     C4 -.-> D4
 
 ```
+
 ```
 graph TD
-    Inicio([Inicio: Portafolio Criterio 8 - ICACIT 2027]) --> Fase1
+    Inicio([Inicio: Portafolio Criterio 8 - ICACIT 2027]) --> P1
 
     subgraph Fase1 [Fase 1: Normativas y Planificación Estratégica]
         P1["Punto 1: Recopilar doc. normativos (RSU, Inclusión, Hostigamiento)"]
@@ -8990,8 +8992,8 @@ graph TD
         P1 --> P6 --> P5
         
         P5 --> Cond1{"¿PEI actual cubre hasta 2032?"}
-        Cond1 -- "Sí" --> FinFase1["Avanzar a Fase 2"]
-        Cond1 -- "No" --> PlanDesarrollo["Proponer Plan de Desarrollo del Programa (2024-2032)"]
+        Cond1 -->|Sí| FinFase1["Avanzar a Fase 2"]
+        Cond1 -->|No| PlanDesarrollo["Proponer Plan de Desarrollo del Programa (2024-2032)"]
         PlanDesarrollo --> Comite["Formulación (Comité de Calidad)"]
         Comite --> RevTec["Revisión Técnica (Of. Calidad)"]
         RevTec --> Aprob["Aprobación oficial (Resolución)"]
@@ -8999,7 +9001,7 @@ graph TD
         PDFSICE --> FinFase1
     end
 
-    FinFase1 --> Fase2
+    FinFase1 --> P2
 
     subgraph Fase2 [Fase 2: Presupuestos y Equipamiento]
         P2["Punto 2: Analizar ejecución presupuestal (2025-2026)"]
@@ -9009,13 +9011,13 @@ graph TD
         P2 --> P3 --> P7
         
         P7 --> Cond2{"¿Reporte emitido por PLADDES?"}
-        Cond2 -- "Sí" --> FinFase2["Integrar al portafolio y avanzar a Fase 3"]
-        Cond2 -- "No" --> Reasignar["Canalizar pedido por Subunidad de Ejecución Presupuestal"]
+        Cond2 -->|Sí| FinFase2["Integrar al portafolio y avanzar a Fase 3"]
+        Cond2 -->|No| Reasignar["Canalizar pedido por Sub. de Ejecución Presupuestal"]
         Reasignar --> Reunir["Reunir órdenes, contratos e inventarios de laboratorios"]
         Reunir --> FinFase2
     end
 
-    FinFase2 --> Fase3
+    FinFase2 --> P4
 
     subgraph Fase3 [Fase 3: Desarrollo y Capacitación Docente]
         P4["Punto 4: Documentar planes de capacitación y reglamentos de movilidad"]
@@ -9024,18 +9026,18 @@ graph TD
         P4 --> P8
         
         P8 --> Cond3{"¿Hay docentes sin capacitación en 2026?"}
-        Cond3 -- "No" --> FinFase3["Avanzar a Fase 4"]
-        Cond3 -- "Sí" --> Coordinar["Coordinar participación antes de fin de año"]
+        Cond3 -->|No| FinFase3["Avanzar a Fase 4"]
+        Cond3 -->|Sí| Coordinar["Coordinar participación antes de fin de año"]
         Coordinar --> FinFase3
     end
 
-    FinFase3 --> Fase4
+    FinFase3 --> C1
 
     subgraph Fase4 [Fase 4: Aspectos Complementarios y Cierre]
-        C1["Describir funciones y capacitación del personal administrativo/técnico"]
-        C2["Adjuntar reglamentos de contratación, promoción y retención docente"]
+        C1["Describir funciones y capacitación del personal adm/técnico"]
+        C2["Adjuntar reglamentos de contratación, promoción y retención"]
         C3["Describir gestión financiera para sostenibilidad"]
-        Riesgos["Filtro de Riesgos: Validar fondos específicos del programa y mitigar demoras"]
+        Riesgos["Filtro de Riesgos: Validar fondos y mitigar demoras"]
         
         C1 --> C2 --> C3 --> Riesgos
     end
